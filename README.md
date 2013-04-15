@@ -1,9 +1,9 @@
-GG4NET
+ÔªøGG4NET
 ======
 
-Biblioteka do obs≥ugi Gadu-Gadu dla .NET bazowana na specyfikacji toxygen'a (http://toxygen.net/libgadu/protocol/).
+Biblioteka do obs≈Çugi Gadu-Gadu dla .NET bazowana na specyfikacji toxygen'a (http://toxygen.net/libgadu/protocol/).
 
-Darmowe do uøytku, wzmianka w autorach nie wymagana ale mile widziana.
+Darmowe do u≈ºytku, wzmianka w autorach nie wymagana ale mile widziana.
 
 ----------
 
