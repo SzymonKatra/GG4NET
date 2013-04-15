@@ -3,7 +3,7 @@ Ten produkt jest udostêpniony 'jak-jest', bez ¿adnych gwarancji, wyraŸnych lub d
 
 Udziela siê zgody ka¿demu do korzystania z tego oprogramowania do jakichkolwiek celów, w tym komercyjnych, zmiany go i rozpowszechniania go za darmo, z zastrze¿eniem nastêpuj¹cych ograniczeñ:
 
-1. Pochodzenie tego oprogramowania nie mog¹ byæ nieprawdziwe, nie wolno twierdziæ, ¿e jest siê autorem oryginalnego oprogramowania. W przypadku korzystania z tego oprogramowania w produkcie, potwierdzenie w dokumentacji produktu bêdzie mile widziane, ale nie jest wymagane.
+1. Pochodzenie tego oprogramowania nie mo¿e byæ nieprawdziwe, nie wolno twierdziæ, ¿e jest siê autorem oryginalnego oprogramowania. W przypadku korzystania z tego oprogramowania w produkcie, potwierdzenie w dokumentacji produktu bêdzie mile widziane, ale nie jest wymagane.
 
 2. Zmienione wersje Ÿród³owe musz¹ byæ wyraŸnie oznaczone jako takie, i nie mo¿e byæ podawane jako oryginalne oprogramowanie.
 
