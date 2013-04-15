@@ -15,13 +15,21 @@ namespace GG4NET
 
     public enum Status
     {
-        None,
+        None = 0,
         NotAvailable,
         Available,
         Busy,
         Invisible,
         DoNotDisturb,
         FreeForCall,
+        Blocked,
+    }
+
+    public enum ContactType
+    {
+        None = 0,
+        Offline,
+        Normal,
         Blocked,
     }
 }

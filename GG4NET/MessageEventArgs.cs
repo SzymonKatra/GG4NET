@@ -12,6 +12,7 @@ namespace GG4NET
         private DateTime _time;
         private string _message;
         private string _htmlMessage;
+        private byte[] _attributes;
 
         public uint Sender
         {
@@ -57,17 +58,27 @@ namespace GG4NET
                 _htmlMessage = value;
             }
         }
+        public byte[] Attributes
+        {
+            get { return _attributes; }
+            set { _attributes = value; }
+        }
 
         public MessageEventArgs(uint sender, DateTime time, string message)
-            : this(sender, time, message, message)
+            : this(sender, time, message, message, null)
         {
         }
         public MessageEventArgs(uint sender, DateTime time, string message, string htmlMessage)
+            : this(sender, time, message, htmlMessage, null)
+        {
+        }
+        public MessageEventArgs(uint sender, DateTime time, string message, string htmlMessage, byte[] attributes)
         {
             _sender = sender;
             _time = time;
             _message = message;
             _htmlMessage = htmlMessage;
+            _attributes = attributes;
         }
     }
 }

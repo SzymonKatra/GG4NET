@@ -12,17 +12,29 @@ namespace GG4NET
         public const uint GG_LOGIN80 = 0x0031;
         public const uint GG_LOGIN80_OK = 0x0035;
         public const uint GG_LOGIN80_FAILED = 0x0043;
+
         public const uint GG_DISCONNECTING = 0x000b;
+
         public const uint GG_NEW_STATUS80 = 0x0038;
+
         public const uint GG_PING = 0x0008;
+
         public const uint GG_RECV_MSG80 = 0x002e;
         public const uint GG_RECV_MSG_ACK = 0x0046;
         public const uint GG_SEND_MSG80 = 0x002d;
+
         public const uint GG_NEED_EMAIL = 0x0014;
+
         public const uint GG_LIST_EMPTY = 0x0012;
+        public const uint GG_NOTIFY_FIRST = 0x000f;
+        public const uint GG_NOTIFY_LAST = 0x0010;
+        public const uint GG_NOTIFY_REPLY80 = 0x0037;
+        public const uint GG_STATUS80 = 0x0036;
+        public const uint GG_ADD_NOTIFY = 0x000d;
+        public const uint GG_REMOVE_NOTIFY = 0x000e;
 
         public const byte GG_LOGIN_HASH_GG32 = 0x01;
-        public const byte GG_LOGIN_HASH_SHA1 = 0x02;      
+        public const byte GG_LOGIN_HASH_SHA1 = 0x02;
 
         public const uint GG_STATUS_NOT_AVAIL = 0x0001;
         public const uint GG_STATUS_NOT_AVAIL_DESCR = 0x0015;
@@ -60,5 +72,9 @@ namespace GG4NET
         public const uint GG_STATUS_FLAG_LINKS_FROM_UNKNOWN = 0x00800000;
 
         public const uint GG_CLASS_CHAT = 0x0008;
+
+        public const uint GG_USER_OFFLINE = 0x01;
+        public const uint GG_USER_NORMAL = 0x03;
+        public const uint GG_USER_BLOCKED = 0x04;
     }
 }

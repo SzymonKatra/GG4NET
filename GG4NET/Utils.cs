@@ -18,6 +18,7 @@ namespace GG4NET
             sha.ComputeHash(toEncode).CopyTo(hash, 0);
             return hash;
         }
+
         public static uint ToInternalStatus(Status status, bool description)
         {
             switch (status)
@@ -52,6 +53,27 @@ namespace GG4NET
                 case Container.GG_STATUS_NOT_AVAIL_DESCR: description = true; return Status.NotAvailable;
             }
             return Status.None;
+        }
+
+        public static uint ToInternalContactType(ContactType type)
+        {
+            switch (type)
+            {
+                case ContactType.Offline: return Container.GG_USER_OFFLINE;
+                case ContactType.Normal: return Container.GG_USER_NORMAL;
+                case ContactType.Blocked: return Container.GG_USER_BLOCKED;
+                default: return 0;
+            }
+        }
+        public static ContactType ToPublicContactType(uint type)
+        {
+            switch (type)
+            {
+                case Container.GG_USER_OFFLINE: return ContactType.Offline;
+                case Container.GG_USER_NORMAL: return ContactType.Normal;
+                case Container.GG_USER_BLOCKED: return ContactType.Blocked;
+                default: return ContactType.None;
+            }
         }
     }
 }

@@ -6,11 +6,11 @@ using System.Runtime.InteropServices;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("GG4NET")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyDescription(".NET Gadu-Gadu library")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("GG4NET")]
-[assembly: AssemblyCopyright("Copyright ©  2013")]
+[assembly: AssemblyCopyright("Szymon Katra")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

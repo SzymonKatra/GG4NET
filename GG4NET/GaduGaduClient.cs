@@ -13,13 +13,13 @@ namespace GG4NET
         private string _pass = string.Empty;
         private Status _status = Status.Available;
         private string _description = string.Empty;
-        private bool _disposed = false;
-
+        private List<ContactInfo> _contactList = new List<ContactInfo>();
         private EndPoint _serverEp = new IPEndPoint(IPAddress.None, 0);
         private Socket _socket = null;
         private PacketReceiver _receiver = null;
         private bool _isLogged = false;
         private byte[] _buffer = null;
+        private bool _disposed = false;
 
         public uint Uin { get { return _uin; } }
         public string Password { get { return _pass; } }
@@ -59,6 +59,7 @@ namespace GG4NET
         public event EventHandler Disconnected = null;
         public event EventHandler Logged = null;
         public event EventHandler ServerObtained = null;
+        public event EventHandler<StatusEventArgs> StatusChanged = null;
         public event EventHandler<MessageEventArgs> MessageReceived = null;
         public event EventHandler NoMailNotify = null;
         #endregion
@@ -109,6 +110,32 @@ namespace GG4NET
         {
             Send(Packets.WriteSendMessage(recipient, message));
         }
+
+        public void AddNotify(uint uin)
+        {
+            AddNotify(uin, ContactType.Normal);
+        }
+        public void AddNotify(uint uin, ContactType type)
+        {
+            _contactList.Add(new ContactInfo() { Uin = uin, Type = type });
+            if (_isLogged) Send(Packets.WriteAddNotify(uin, type));
+        }
+        public void RemoveNotify(uint uin)
+        {
+            ContactInfo ci = _contactList.Find(x => x.Uin == uin);
+            _contactList.Remove(ci);
+            if (_isLogged) Send(Packets.WriteRemoveNotify(uin, ci.Type));
+        }
+        public void RemoveNotify(uint uin, ContactType type)
+        {
+            ContactInfo ci = _contactList.Find(x => x.Uin == uin);
+            _contactList.Remove(ci);
+            if (_isLogged) Send(Packets.WriteRemoveNotify(uin, type));
+        }
+        public ContactInfo GetNotifyInfo(uint uin)
+        {
+            return _contactList.Find(x => x.Uin == uin);
+        }
         #endregion
 
         #region Other
@@ -146,7 +173,27 @@ namespace GG4NET
                 #endregion
                 #region GG_LOGIN80_OK
                 case Container.GG_LOGIN80_OK:
-                    Send(Packets.WriteEmptyList());
+                    //if (_contactList.Count <= 0)
+                    //{
+                    //    Send(Packets.WriteEmptyContactList());
+                    //}
+                    //else
+                    //{
+                    //    int remOffset = 0;
+                    //    while (remOffset < _contactList.Count) Send(Packets.WriteContactList(_contactList, ref remOffset));
+                    //}
+                    Send(Packets.WriteEmptyContactList());
+                    //foreach (ContactInfo item in _contactList) Send(Packets.WriteAddNotify(item));
+                    for (int i = 0; i < _contactList.Count; i++)
+                    {
+                        int toSend = Math.Min(400, _contactList.Count - i);
+                        using (PacketWriter writer = new PacketWriter())
+                        {
+                            for (int j = i; j < toSend + i; j++) writer.Write(Packets.WriteAddNotify(_contactList[j].Uin, _contactList[j].Type));
+                            Send(writer.Data);
+                        }
+                        i += toSend;
+                    }
                     _isLogged = true;
                     OnLogged();
                     break;
@@ -164,10 +211,30 @@ namespace GG4NET
                     DateTime time;
                     string plain;
                     string html;
-                    Packets.ReadReceiveMessage(e.Data, out sen, out seq, out time, out plain, out html);
+                    byte[] attrib;
+                    Packets.ReadReceiveMessage(e.Data, out sen, out seq, out time, out plain, out html, out attrib);
 
                     Send(Packets.WriteReceiveAck(seq));
-                    OnMessageReceived(new MessageEventArgs(sen, time, plain, html));                
+                    OnMessageReceived(new MessageEventArgs(sen, time, plain, html, attrib));                
+                    break;
+                #endregion
+                #region GG_NOTIFY_REPLY80 GG_STATUS80
+                case Container.GG_NOTIFY_REPLY80:
+                case Container.GG_STATUS80:
+                    List<ContactInfo> conList;
+                    Packets.ReadNotifyReply(e.Data, out conList);
+                    foreach (ContactInfo item in conList)
+                    {
+                        for (int i = 0; i < _contactList.Count; i++)
+                        {
+                            if (_contactList[i].Uin == item.Uin)
+                            {
+                                _contactList[i] = item;
+                                OnStatusChanged(new StatusEventArgs(item));
+                                break;
+                            }
+                        }
+                    }
                     break;
                 #endregion
                 #region GG_NEED_EMAIL
@@ -219,7 +286,7 @@ namespace GG4NET
                 }
                 else throw new Exception();
             }
-            catch { _isLogged = false; if (Disconnected != null) Disconnected(this, EventArgs.Empty); }
+            catch { _isLogged = false; OnDisconnected(); }
         }
         protected void OnSendCallback(IAsyncResult result)
         {
@@ -247,6 +314,10 @@ namespace GG4NET
         protected void OnServerObtained()
         {
             if (ServerObtained != null) ServerObtained(this, EventArgs.Empty);
+        }
+        protected void OnStatusChanged(StatusEventArgs e)
+        {
+            if (StatusChanged != null) StatusChanged(this, e);
         }
         protected void OnMessageReceived(MessageEventArgs e)
         {
