@@ -2,11 +2,13 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
 
 namespace GG4NET
 {
     public class GaduGaduClient : IDisposable
     {
+        #region Properties
         private uint _uin = 0;
         private string _pass = string.Empty;
         private Status _status = Status.Available;
@@ -46,22 +48,31 @@ namespace GG4NET
             }
         }
         public bool IsLogged { get { return _isLogged; } }
+        #endregion
 
+        #region Events
         private EventHandler _connectFailed = null;
         private EventHandler _loginFailed = null;
+        private EventHandler _serverObtainingFailed = null;
 
         public event EventHandler Connected = null;
         public event EventHandler Disconnected = null;
         public event EventHandler Logged = null;
         public event EventHandler ServerObtained = null;
         public event EventHandler<MessageEventArgs> MessageReceived = null;
+        public event EventHandler NoMailNotify = null;
+        #endregion
 
+        #region Constructors
         public GaduGaduClient(uint uin, string password)
         {
             _uin = uin;
             _pass = password;
         }
+        #endregion
 
+        #region Methods
+        #region Common
         public void Connect()
         {
             Connect(null, null, null, GGPort.P8074);
@@ -73,15 +84,11 @@ namespace GG4NET
         public void Connect(EventHandler connectFailed, EventHandler loginFailed, EventHandler serverObtainingFailed, GGPort port)
         {
             if (_socket != null) if (_socket.Connected) throw new Exception("You are already connected! Call Disconnect method");
-            IPAddress ip = HTTPServices.ObtainServer(_uin);
-            if (ip == IPAddress.None)
-            {
-                if (serverObtainingFailed != null) serverObtainingFailed(this, EventArgs.Empty);
-                return;
-            }
-            if (ServerObtained != null) ServerObtained(this, EventArgs.Empty);
-            Connect(connectFailed, loginFailed, new IPEndPoint(ip, (int)port));
-            
+
+            object asyncData = new object[] { connectFailed, loginFailed, port };
+            if (!ThreadPool.QueueUserWorkItem(ObtainServer, asyncData)) ObtainServer(asyncData);
+
+            _serverObtainingFailed = serverObtainingFailed;           
         }
         public void Connect(EventHandler connectFailed, EventHandler loginFailed, EndPoint serverEp)
         {
@@ -102,33 +109,55 @@ namespace GG4NET
         {
             Send(Packets.WriteSendMessage(recipient, message));
         }
+        #endregion
 
+        #region Other
         protected void Send(byte[] data)
         {
             if (_socket == null || !_socket.Connected) throw new Exception("You are not connected!");
             _socket.BeginSend(data, 0, data.Length, 0, new AsyncCallback(OnSendCallback), _socket);
         }
+        private void ObtainServer(object data)
+        {
+            object[] asyncData = (object[])data;
+            EventHandler connectFailed = (EventHandler)asyncData[0];
+            EventHandler loginFailed = (EventHandler)asyncData[1];
+            GGPort port = (GGPort)asyncData[2];
+
+            IPAddress ip = HTTPServices.ObtainServer(_uin);
+            if (ip == IPAddress.None)
+            {
+                if (_serverObtainingFailed != null) _serverObtainingFailed(this, EventArgs.Empty);
+                return;
+            }
+            OnServerObtained();
+            Connect(connectFailed, loginFailed, new IPEndPoint(ip, (int)port));
+        }
         private void _receiver_PacketArrived(object sender, PacketReceiverMessage e)
         {
             switch (e.PacketType)
             {
+                #region GG_WELCOME
                 case Container.GG_WELCOME:
                     uint seed;
                     Packets.ReadWelcome(e.Data, out seed);
                     Send(Packets.WriteLogin(_uin, _pass, seed, _status, _description));
                     break;
-
+                #endregion
+                #region GG_LOGIN80_OK
                 case Container.GG_LOGIN80_OK:
-                    if (Logged != null) Logged(this, EventArgs.Empty);
                     Send(Packets.WriteEmptyList());
                     _isLogged = true;
+                    OnLogged();
                     break;
-
+                #endregion
+                #region GG_LOGIN80_FAILED
                 case Container.GG_LOGIN80_FAILED:
                     if (_loginFailed != null) _loginFailed(this, EventArgs.Empty);
                     _isLogged = false;
                     break;
-
+                #endregion
+                #region GG_RECV_MSG80
                 case Container.GG_RECV_MSG80:
                     uint sen;
                     uint seq;
@@ -137,19 +166,26 @@ namespace GG4NET
                     string html;
                     Packets.ReadReceiveMessage(e.Data, out sen, out seq, out time, out plain, out html);
 
-                    if (MessageReceived != null) MessageReceived(this, new MessageEventArgs(sen, time, plain, html));
-
                     Send(Packets.WriteReceiveAck(seq));
+                    OnMessageReceived(new MessageEventArgs(sen, time, plain, html));                
                     break;
+                #endregion
+                #region GG_NEED_EMAIL
+                case Container.GG_NEED_EMAIL:
+                    OnNoMailNotify();
+                    break;
+                #endregion
             }
         }
+        #endregion
 
+        #region Callback
         protected void OnConnectCallback(IAsyncResult result)
         {
             try
             {
                 _socket.EndConnect(result);
-                if (Connected != null) Connected(this, EventArgs.Empty);
+                OnConnected();
                 _buffer = new byte[8192];
                 _receiver = new PacketReceiver();
                 _receiver.PacketArrived += _receiver_PacketArrived;
@@ -166,7 +202,7 @@ namespace GG4NET
                 _socket.Close();
             }
             catch { }
-            if (Disconnected != null) Disconnected(this, EventArgs.Empty);
+            OnDisconnected();
         }
         protected void OnReceiveCallback(IAsyncResult result)
         {
@@ -175,9 +211,10 @@ namespace GG4NET
                 int bytesReaded = _socket.EndReceive(result);
                 if (bytesReaded > 0)
                 {
-                    byte[] bf = new byte[bytesReaded];
-                    Buffer.BlockCopy(_buffer, 0, bf, 0, bytesReaded);
-                    _receiver.DataReceived(bf);
+                    //byte[] bf = new byte[bytesReaded];
+                    //Buffer.BlockCopy(_buffer, 0, bf, 0, bytesReaded);
+                    //_receiver.DataReceived(bf);
+                    _receiver.DataReceived(_buffer, 0, bytesReaded);
                     _socket.BeginReceive(_buffer, 0, 8192, 0, new AsyncCallback(OnReceiveCallback), _socket);
                 }
                 else throw new Exception();
@@ -192,7 +229,36 @@ namespace GG4NET
             }
             catch { }
         }
+        #endregion
 
+        #region EventPerformers
+        protected void OnConnected()
+        {
+            if (Connected != null) Connected(this, EventArgs.Empty);
+        }
+        protected void OnDisconnected()
+        {
+            if (Disconnected != null) Disconnected(this, EventArgs.Empty);
+        }
+        protected void OnLogged()
+        {
+            if (Logged != null) Logged(this, EventArgs.Empty);
+        }
+        protected void OnServerObtained()
+        {
+            if (ServerObtained != null) ServerObtained(this, EventArgs.Empty);
+        }
+        protected void OnMessageReceived(MessageEventArgs e)
+        {
+            if (MessageReceived != null) MessageReceived(this, e);
+        }
+        protected void OnNoMailNotify()
+        {
+            if (NoMailNotify != null) NoMailNotify(this, EventArgs.Empty);
+        }
+        #endregion
+
+        #region Dispose
         public void Dispose()
         {
             Dispose(true);
@@ -218,5 +284,7 @@ namespace GG4NET
         {
             Dispose(false);
         }
+        #endregion
+        #endregion
     }
 }

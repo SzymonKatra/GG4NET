@@ -34,30 +34,31 @@ namespace GG4NET
 
         public event EventHandler<PacketReceiverMessage> PacketArrived = null;
 
-        public void DataReceived(byte[] data)
+        public void DataReceived(byte[] buffer, int offset, int size)
         {
-            int pos = 0;
-            while (pos < data.Length)
+            int pos = offset;
+            int offSiz = Math.Min(buffer.Length, offset + size);
+            while (pos < offSiz)
             {
-                int available = data.Length - pos;   
+                int available = offSiz - pos;   
                 if (_dataBuffer != null) //receiving packet data
                 {
                     int toRead = Math.Min(_dataBuffer.Length - _bytesReceived, available);
-                    Array.Copy(data, pos, _dataBuffer, _bytesReceived, toRead);
+                    Array.Copy(buffer, pos, _dataBuffer, _bytesReceived, toRead);
                     pos += toRead;
                     ReadFinished(toRead);
                 }          
                 else if (!_packetTypeReceived) //receiving packet type
                 {
                     int toRead = Math.Min(_packetTypeBuffer.Length - _bytesReceived, available);
-                    Array.Copy(data, pos, _packetTypeBuffer, _bytesReceived, toRead);
+                    Array.Copy(buffer, pos, _packetTypeBuffer, _bytesReceived, toRead);
                     pos += toRead;
                     ReadFinished(toRead);
                 }
                 else //receiving packet length
                 {
                     int toRead = Math.Min(_packetLengthBuffer.Length - _bytesReceived, available);
-                    Array.Copy(data, pos, _packetLengthBuffer, _bytesReceived, toRead);
+                    Array.Copy(buffer, pos, _packetLengthBuffer, _bytesReceived, toRead);
                     pos += toRead;
                     ReadFinished(toRead);
                 }

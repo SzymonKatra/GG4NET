@@ -18,11 +18,11 @@ namespace GG4NET
         public const uint GG_RECV_MSG80 = 0x002e;
         public const uint GG_RECV_MSG_ACK = 0x0046;
         public const uint GG_SEND_MSG80 = 0x002d;
+        public const uint GG_NEED_EMAIL = 0x0014;
+        public const uint GG_LIST_EMPTY = 0x0012;
 
         public const byte GG_LOGIN_HASH_GG32 = 0x01;
-        public const byte GG_LOGIN_HASH_SHA1 = 0x02;
-
-        public const uint GG_LIST_EMPTY = 0x0012;
+        public const byte GG_LOGIN_HASH_SHA1 = 0x02;      
 
         public const uint GG_STATUS_NOT_AVAIL = 0x0001;
         public const uint GG_STATUS_NOT_AVAIL_DESCR = 0x0015;

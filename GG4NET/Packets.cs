@@ -43,7 +43,7 @@ namespace GG4NET
             using (PacketWriter writer = new PacketWriter())
             {
                 byte[] ver = Encoding.ASCII.GetBytes("Gadu-Gadu Client build 10.0.0.10450");
-                byte[] desc = Encoding.ASCII.GetBytes(description);
+                byte[] desc = Encoding.UTF8.GetBytes(description);
                 writer.Write(uin);
                 writer.Write('p'); writer.Write('l');
                 writer.Write(Container.GG_LOGIN_HASH_SHA1);
@@ -78,9 +78,9 @@ namespace GG4NET
         {
             using (PacketWriter writer = new PacketWriter())
             {
-                byte[] desc = Encoding.ASCII.GetBytes(description);
+                byte[] desc = Encoding.UTF8.GetBytes(description);
 
-                writer.Write(Utils.ToInternalStatus(status, (description != string.Empty)));
+                writer.Write(Utils.ToInternalStatus(status, (description != string.Empty)) | Container.GG_STATUS_DESCR_MASK);
                 writer.Write(Container.GG_STATUS_FLAG_LINKS_FROM_UNKNOWN);
                 writer.Write((uint)(description == string.Empty ? 0 : desc.Length));
                 if (description != string.Empty) writer.Write(desc);
