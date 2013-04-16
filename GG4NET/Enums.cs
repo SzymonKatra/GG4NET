@@ -32,4 +32,18 @@ namespace GG4NET
         Normal,
         Blocked,
     }
+
+    public enum TypingNotifyType
+    {
+        None = 0,
+        Start,
+        Stop,
+    }
+
+    public enum Gender
+    {
+        None,
+        Female,
+        Male,
+    }
 }

@@ -19,6 +19,7 @@ namespace GG4NET
         private PacketReceiver _receiver = null;
         private bool _isLogged = false;
         private byte[] _buffer = null;
+        private System.Timers.Timer _pingTimer;
         private bool _disposed = false;
 
         public uint Uin { get { return _uin; } }
@@ -51,10 +52,9 @@ namespace GG4NET
         #endregion
 
         #region Events
-        private EventHandler _connectFailed = null;
-        private EventHandler _loginFailed = null;
-        private EventHandler _serverObtainingFailed = null;
-
+        public event EventHandler ConnectFailed = null;
+        public event EventHandler LoginFailed = null;
+        public event EventHandler ServerObtainingFailed = null;
         public event EventHandler Connected = null;
         public event EventHandler Disconnected = null;
         public event EventHandler Logged = null;
@@ -62,6 +62,9 @@ namespace GG4NET
         public event EventHandler<StatusEventArgs> StatusChanged = null;
         public event EventHandler<MessageEventArgs> MessageReceived = null;
         public event EventHandler NoMailNotify = null;
+        public event EventHandler<MultiloginEventArgs> MultiloginNotify = null;
+        public event EventHandler<TypingNotifyEventArgs> TypingNotifyReceived = null;
+        public event EventHandler<PublicDirectoryReplyEventArgs> PublicDirectoryReplyReceived = null;
         #endregion
 
         #region Constructors
@@ -76,25 +79,16 @@ namespace GG4NET
         #region Common
         public void Connect()
         {
-            Connect(null, null, null, GGPort.P8074);
+            Connect(GGPort.P8074);
         }
-        public void Connect(EventHandler connectFailed, EventHandler loginFailed, EventHandler serverObtainingFailed)
-        {
-            Connect(connectFailed, loginFailed, serverObtainingFailed, GGPort.P8074);
-        }
-        public void Connect(EventHandler connectFailed, EventHandler loginFailed, EventHandler serverObtainingFailed, GGPort port)
+        public void Connect(GGPort port)
         {
             if (_socket != null) if (_socket.Connected) throw new Exception("You are already connected! Call Disconnect method");
 
-            object asyncData = new object[] { connectFailed, loginFailed, port };
-            if (!ThreadPool.QueueUserWorkItem(ObtainServer, asyncData)) ObtainServer(asyncData);
-
-            _serverObtainingFailed = serverObtainingFailed;           
+            if (!ThreadPool.QueueUserWorkItem(ObtainServer, port)) ObtainServer(port);         
         }
-        public void Connect(EventHandler connectFailed, EventHandler loginFailed, EndPoint serverEp)
+        public virtual void Connect(EndPoint serverEp)
         {
-            _connectFailed = connectFailed;
-            _loginFailed = loginFailed;
             if (_socket != null) if (_socket.Connected) throw new Exception("You are already connected! Call Disconnect method");
 
             _serverEp = serverEp;
@@ -106,9 +100,26 @@ namespace GG4NET
             if (_socket == null) throw new Exception("You are not connected!");
             _socket.BeginDisconnect(false, new AsyncCallback(OnDisconnectCallback), _socket);
         }
+
         public void SendMessage(uint recipient, string message)
         {
-            Send(Packets.WriteSendMessage(recipient, message));
+            SendMessage(recipient, message, string.Format("<span style=\"color:#000000; font-family:'MS Shell Dlg 2'; font-size:9pt; \">{0}</span>\0", message), null);
+        }
+        public void SendMessage(uint recipient, string message, byte[] attributes)
+        {
+            SendMessage(recipient, message, string.Format("<span style=\"color:#000000; font-family:'MS Shell Dlg 2'; font-size:9pt; \">{0}</span>\0", message), attributes);
+        }
+        public void SendMessage(uint recipient, string message, string htmlMessage)
+        {
+            SendMessage(recipient, message, htmlMessage, null);
+        }
+        public void SendMessage(uint recipient, string message, string htmlMessage, byte[] attributes)
+        {
+            if (_isLogged)
+            {
+                Send(Packets.WriteSendMessage(recipient, message, htmlMessage, attributes));
+            }
+            else throw new NotLoggedException("You are not logged to GG network!");
         }
 
         public void AddNotify(uint uin)
@@ -136,6 +147,48 @@ namespace GG4NET
         {
             return _contactList.Find(x => x.Uin == uin);
         }
+
+        public void SendTypingNotify(uint uin, ushort length)
+        {
+            if (_isLogged)
+            {
+                SendTypingNotify(uin, TypingNotifyType.None, length);
+            }
+            else throw new NotLoggedException("You are not logged to GG network!");
+        }
+        public void SendTypingNotify(uint uin, TypingNotifyType type, ushort length)
+        {
+            if (_isLogged)
+            {
+                Send(Packets.WriteTypingNotify(uin, type, length));
+            }
+            else throw new NotLoggedException("You are not logged to GG network!");
+        }
+
+        public void SendPublicDirectoryRequest(uint uin, string firstName, string lastName, string nickname, int startBirthYear, int stopBirthYear, string city, Gender gender, bool activeOnly, string familyName, string familyCity, uint uinStart)
+        {
+            if (_isLogged)
+            {
+                Send(Packets.WritePublicDirectoryRequest(Container.GG_PUBDIR50_SEARCH, uin, firstName, lastName, nickname, startBirthYear, stopBirthYear, city, gender, activeOnly, familyName, familyCity, uinStart));
+            }
+            else throw new NotLoggedException("You are not logged to GG network!");
+        }
+        public void SendMyDataToPublicDirectory(string firstName, string lastName, string nickname, int birthYear, string city, Gender gender, string familyName, string familyCity)
+        {
+            if (_isLogged)
+            {
+                Send(Packets.WritePublicDirectoryRequest(Container.GG_PUBDIR50_WRITE, 0, firstName, lastName, nickname, birthYear, 0, city, gender, false, familyName, familyCity, 0));
+            }
+            else throw new NotLoggedException("You are not logged to GG network!");
+        }
+        public void GetMyDataFromPublicDirectory()
+        {
+            if (_isLogged)
+            {
+                Send(Packets.WritePublicDirectoryRequest(Container.GG_PUBDIR50_SEARCH, _uin, string.Empty, string.Empty, string.Empty, 0, 0, string.Empty, Gender.None, false, string.Empty, string.Empty, 0));
+            }
+            else throw new NotLoggedException("You are not logged to GG network!");
+        }
         #endregion
 
         #region Other
@@ -146,103 +199,152 @@ namespace GG4NET
         }
         private void ObtainServer(object data)
         {
-            object[] asyncData = (object[])data;
-            EventHandler connectFailed = (EventHandler)asyncData[0];
-            EventHandler loginFailed = (EventHandler)asyncData[1];
-            GGPort port = (GGPort)asyncData[2];
+            GGPort port = (GGPort)data;
 
             IPAddress ip = HTTPServices.ObtainServer(_uin);
             if (ip == IPAddress.None)
             {
-                if (_serverObtainingFailed != null) _serverObtainingFailed(this, EventArgs.Empty);
+                OnServerObtainingFailed();
                 return;
             }
             OnServerObtained();
-            Connect(connectFailed, loginFailed, new IPEndPoint(ip, (int)port));
+            Connect(new IPEndPoint(ip, (int)port));
         }
         private void _receiver_PacketArrived(object sender, PacketReceiverMessage e)
         {
             switch (e.PacketType)
             {
-                #region GG_WELCOME
-                case Container.GG_WELCOME:
-                    uint seed;
-                    Packets.ReadWelcome(e.Data, out seed);
-                    Send(Packets.WriteLogin(_uin, _pass, seed, _status, _description));
-                    break;
-                #endregion
-                #region GG_LOGIN80_OK
-                case Container.GG_LOGIN80_OK:
-                    //if (_contactList.Count <= 0)
-                    //{
-                    //    Send(Packets.WriteEmptyContactList());
-                    //}
-                    //else
-                    //{
-                    //    int remOffset = 0;
-                    //    while (remOffset < _contactList.Count) Send(Packets.WriteContactList(_contactList, ref remOffset));
-                    //}
-                    Send(Packets.WriteEmptyContactList());
-                    //foreach (ContactInfo item in _contactList) Send(Packets.WriteAddNotify(item));
+                case Container.GG_WELCOME: ProcessWelcome(e.Data); break;
+
+                case Container.GG_LOGIN80_OK: ProcessLoginOk(e.Data); break;
+
+                case Container.GG_LOGIN80_FAILED: ProcessLoginFailed(e.Data); break;
+
+                case Container.GG_RECV_OWN_MSG:
+                case Container.GG_RECV_MSG80: ProcessReceiveMessage(e.Data); break;
+
+                case Container.GG_NOTIFY_REPLY80:
+                case Container.GG_STATUS80: ProcessNotifyReply(e.Data); break;
+
+                case Container.GG_NEED_EMAIL: ProcessNeedEmail(e.Data); break;
+
+                case Container.GG_MULTILOGON_INFO: ProcessMultilogonInfo(e.Data); break;
+
+                case Container.GG_TYPING_NOTIFY: ProcessTypingNotify(e.Data); break;
+
+                case Container.GG_PUBDIR50_REPLY: ProcessPublicDirectoryReply(e.Data); break;
+            }
+        }
+        private void CloseSocket()
+        {
+            try
+            {
+                _isLogged = false;
+                _socket.Close();
+            }
+            catch { }
+            _pingTimer.Stop();
+        }
+        #endregion
+
+        #region PacketProcessors
+        protected virtual void ProcessWelcome(byte[] data)
+        {
+            uint seed;
+            Packets.ReadWelcome(data, out seed);
+            Send(Packets.WriteLogin(_uin, _pass, seed, _status, _description));
+        }
+        protected virtual void ProcessLoginOk(byte[] data)
+        {
+            Send(Packets.WriteEmptyContactList());
+
+            //sending contact list
+            //400 per packet
+            //using GG_NOTIFY_ADD because GG_NOTIFY_FIRST/LAST not working for me
+            for (int i = 0; i < _contactList.Count; i++)
+            {
+                int toSend = Math.Min(400, _contactList.Count - i);
+                using (PacketWriter writer = new PacketWriter())
+                {
+                    for (int j = i; j < toSend + i; j++) writer.Write(Packets.WriteAddNotify(_contactList[j].Uin, _contactList[j].Type));
+                    Send(writer.Data);
+                }
+                i += toSend;
+            }
+
+            _isLogged = true;
+            OnLogged();
+        }
+        protected virtual void ProcessLoginFailed(byte[] data)
+        {
+            _isLogged = false;
+            OnLoginFailed();
+        }
+        protected virtual void ProcessReceiveMessage(byte[] data)
+        {
+            uint uin;
+            uint seq;
+            DateTime time;
+            string plain;
+            string html;
+            byte[] attrib;
+            Packets.ReadReceiveMessage(data, out uin, out seq, out time, out plain, out html, out attrib);
+
+            Send(Packets.WriteReceiveAck(seq));
+            OnMessageReceived(new MessageEventArgs(uin, time, plain, html, attrib)); 
+        }
+        protected virtual void ProcessNotifyReply(byte[] data)
+        {
+            List<ContactInfo> conList;
+            Packets.ReadNotifyReply(data, out conList);
+            foreach (ContactInfo item in conList)
+            {
+                if (item.Uin == _uin) //multilogin status adaptation
+                {
+                    _status = item.Status;
+                    _description = item.Description;
+                    OnStatusChanged(new StatusEventArgs(item));
+                }
+                else
+                {
                     for (int i = 0; i < _contactList.Count; i++)
                     {
-                        int toSend = Math.Min(400, _contactList.Count - i);
-                        using (PacketWriter writer = new PacketWriter())
+                        if (_contactList[i].Uin == item.Uin)
                         {
-                            for (int j = i; j < toSend + i; j++) writer.Write(Packets.WriteAddNotify(_contactList[j].Uin, _contactList[j].Type));
-                            Send(writer.Data);
-                        }
-                        i += toSend;
-                    }
-                    _isLogged = true;
-                    OnLogged();
-                    break;
-                #endregion
-                #region GG_LOGIN80_FAILED
-                case Container.GG_LOGIN80_FAILED:
-                    if (_loginFailed != null) _loginFailed(this, EventArgs.Empty);
-                    _isLogged = false;
-                    break;
-                #endregion
-                #region GG_RECV_MSG80
-                case Container.GG_RECV_MSG80:
-                    uint sen;
-                    uint seq;
-                    DateTime time;
-                    string plain;
-                    string html;
-                    byte[] attrib;
-                    Packets.ReadReceiveMessage(e.Data, out sen, out seq, out time, out plain, out html, out attrib);
-
-                    Send(Packets.WriteReceiveAck(seq));
-                    OnMessageReceived(new MessageEventArgs(sen, time, plain, html, attrib));                
-                    break;
-                #endregion
-                #region GG_NOTIFY_REPLY80 GG_STATUS80
-                case Container.GG_NOTIFY_REPLY80:
-                case Container.GG_STATUS80:
-                    List<ContactInfo> conList;
-                    Packets.ReadNotifyReply(e.Data, out conList);
-                    foreach (ContactInfo item in conList)
-                    {
-                        for (int i = 0; i < _contactList.Count; i++)
-                        {
-                            if (_contactList[i].Uin == item.Uin)
-                            {
-                                _contactList[i] = item;
-                                OnStatusChanged(new StatusEventArgs(item));
-                                break;
-                            }
+                            _contactList[i] = item;
+                            OnStatusChanged(new StatusEventArgs(item));
+                            break;
                         }
                     }
-                    break;
-                #endregion
-                #region GG_NEED_EMAIL
-                case Container.GG_NEED_EMAIL:
-                    OnNoMailNotify();
-                    break;
-                #endregion
+                }
             }
+        }
+        protected virtual void ProcessNeedEmail(byte[] data)
+        {
+            OnNoMailNotify();
+        }
+        protected virtual void ProcessMultilogonInfo(byte[] data)
+        {
+            MultiloginInfo[] infos;
+            Packets.ReadMultiloginInfo(data, out infos);
+            foreach (MultiloginInfo info in infos) OnMultiloginNotify(new MultiloginEventArgs(info));
+        }
+        protected virtual void ProcessTypingNotify(byte[] data)
+        {
+            uint uin;
+            TypingNotifyType type;
+            ushort length;
+
+            Packets.ReadTypingNotify(data, out uin, out type, out length);
+
+            OnTypingNotifyReceived(new TypingNotifyEventArgs(uin, type, length));
+        }
+        protected virtual void ProcessPublicDirectoryReply(byte[] data)
+        {
+            PublicDirectoryReply[] reply;
+            uint ns;
+            Packets.ReadPublicDirectoryReply(data, out reply, out ns);
+            OnPublicDirectoryReplyReceived(new PublicDirectoryReplyEventArgs(reply, ns));
         }
         #endregion
 
@@ -257,18 +359,20 @@ namespace GG4NET
                 _receiver = new PacketReceiver();
                 _receiver.PacketArrived += _receiver_PacketArrived;
                 _socket.BeginReceive(_buffer, 0, 8192, 0, new AsyncCallback(OnReceiveCallback), _socket);
+                _pingTimer = new System.Timers.Timer(1000 * 60 * 4); //4 minutes
+                _pingTimer.Elapsed += (s, e) => { Send(Packets.WritePing()); };
+                _pingTimer.Start();
             }
-            catch { if (_connectFailed != null)_connectFailed(this, EventArgs.Empty); }
+            catch { OnConnectFailed(); CloseSocket(); }
         }       
         protected void OnDisconnectCallback(IAsyncResult result)
         {
             try
             {
-                _isLogged = false;
                 _socket.EndDisconnect(result);
-                _socket.Close();
             }
             catch { }
+            CloseSocket();
             OnDisconnected();
         }
         protected void OnReceiveCallback(IAsyncResult result)
@@ -278,15 +382,12 @@ namespace GG4NET
                 int bytesReaded = _socket.EndReceive(result);
                 if (bytesReaded > 0)
                 {
-                    //byte[] bf = new byte[bytesReaded];
-                    //Buffer.BlockCopy(_buffer, 0, bf, 0, bytesReaded);
-                    //_receiver.DataReceived(bf);
                     _receiver.DataReceived(_buffer, 0, bytesReaded);
                     _socket.BeginReceive(_buffer, 0, 8192, 0, new AsyncCallback(OnReceiveCallback), _socket);
                 }
                 else throw new Exception();
             }
-            catch { _isLogged = false; OnDisconnected(); }
+            catch { CloseSocket(); OnDisconnected(); }
         }
         protected void OnSendCallback(IAsyncResult result)
         {
@@ -299,33 +400,57 @@ namespace GG4NET
         #endregion
 
         #region EventPerformers
-        protected void OnConnected()
+        protected virtual void OnConnectFailed()
+        {
+            if (ConnectFailed != null) ConnectFailed(this, EventArgs.Empty);
+        }
+        protected virtual void OnLoginFailed()
+        {
+            if (LoginFailed != null) LoginFailed(this, EventArgs.Empty);
+        }
+        protected virtual void OnServerObtainingFailed()
+        {
+            if (ServerObtainingFailed != null) ServerObtainingFailed(this, EventArgs.Empty);
+        }
+        protected virtual void OnConnected()
         {
             if (Connected != null) Connected(this, EventArgs.Empty);
         }
-        protected void OnDisconnected()
+        protected virtual void OnDisconnected()
         {
             if (Disconnected != null) Disconnected(this, EventArgs.Empty);
         }
-        protected void OnLogged()
+        protected virtual void OnLogged()
         {
             if (Logged != null) Logged(this, EventArgs.Empty);
         }
-        protected void OnServerObtained()
+        protected virtual void OnServerObtained()
         {
             if (ServerObtained != null) ServerObtained(this, EventArgs.Empty);
         }
-        protected void OnStatusChanged(StatusEventArgs e)
+        protected virtual void OnStatusChanged(StatusEventArgs e)
         {
             if (StatusChanged != null) StatusChanged(this, e);
         }
-        protected void OnMessageReceived(MessageEventArgs e)
+        protected virtual void OnMessageReceived(MessageEventArgs e)
         {
             if (MessageReceived != null) MessageReceived(this, e);
         }
-        protected void OnNoMailNotify()
+        protected virtual void OnNoMailNotify()
         {
             if (NoMailNotify != null) NoMailNotify(this, EventArgs.Empty);
+        }
+        protected virtual void OnMultiloginNotify(MultiloginEventArgs e)
+        {
+            if (MultiloginNotify != null) MultiloginNotify(this, e);
+        }
+        protected virtual void OnTypingNotifyReceived(TypingNotifyEventArgs e)
+        {
+            if (TypingNotifyReceived != null) TypingNotifyReceived(this, e);
+        }
+        protected virtual void OnPublicDirectoryReplyReceived(PublicDirectoryReplyEventArgs e)
+        {
+            if (PublicDirectoryReplyReceived != null) PublicDirectoryReplyReceived(this, e);
         }
         #endregion
 

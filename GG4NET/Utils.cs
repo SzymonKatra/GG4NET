@@ -75,5 +75,43 @@ namespace GG4NET
                 default: return ContactType.None;
             }
         }
+
+        public static ushort ToInternalTypingNotify(TypingNotifyType type)
+        {
+            switch (type)
+            {
+                case TypingNotifyType.Start: return Container.GG_TYPING_NOTIFY_TYPE_START;
+                case TypingNotifyType.Stop: return Container.GG_TYPING_NOTIFY_TYPE_STOP;
+                default: return 0;
+            }
+        }
+        public static TypingNotifyType ToPublicTypingNotify(ushort type)
+        {
+            switch (type)
+            {
+                case Container.GG_TYPING_NOTIFY_TYPE_START: return TypingNotifyType.Start;
+                case Container.GG_TYPING_NOTIFY_TYPE_STOP: return TypingNotifyType.Stop;
+                default: return TypingNotifyType.None;
+            }
+        }
+
+        public static uint ToInternalGender(Gender gender, bool inverted = false)
+        {
+            switch (gender)
+            {
+                case Gender.Female: return (inverted ? Container.GG_PUBDIR50_GENDER_SET_FEMALE : Container.GG_PUBDIR50_GENDER_FEMALE);
+                case Gender.Male: return (inverted ? Container.GG_PUBDIR50_GENDER_SET_MALE : Container.GG_PUBDIR50_GENDER_MALE);
+                default: return 0;
+            }
+        }
+        public static Gender ToPublicGender(uint gender, bool inverted = false)
+        {
+            switch (gender)
+            {
+                case Container.GG_PUBDIR50_GENDER_FEMALE: return (inverted ? Gender.Male : Gender.Female);
+                case Container.GG_PUBDIR50_GENDER_MALE: return (inverted ? Gender.Female : Gender.Male);
+                default: return Gender.None;
+            }
+        }
     }
 }

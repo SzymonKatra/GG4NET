@@ -17,11 +17,15 @@ namespace GG4NET
 
         public const uint GG_NEW_STATUS80 = 0x0038;
 
+        public const uint GG_PONG = 0x0007;
         public const uint GG_PING = 0x0008;
 
         public const uint GG_RECV_MSG80 = 0x002e;
         public const uint GG_RECV_MSG_ACK = 0x0046;
         public const uint GG_SEND_MSG80 = 0x002d;
+
+        public const uint GG_RECV_OWN_MSG = 0x005A;
+        public const uint GG_MULTILOGON_INFO = 0x005B;
 
         public const uint GG_NEED_EMAIL = 0x0014;
 
@@ -32,6 +36,12 @@ namespace GG4NET
         public const uint GG_STATUS80 = 0x0036;
         public const uint GG_ADD_NOTIFY = 0x000d;
         public const uint GG_REMOVE_NOTIFY = 0x000e;
+
+        public const uint GG_TYPING_NOTIFY = 0x0059;
+
+        public const uint GG_PUBDIR50_REQUEST = 0x0014;
+        public const uint GG_PUBDIR50_REPLY = 0x000e;
+
 
         public const byte GG_LOGIN_HASH_GG32 = 0x01;
         public const byte GG_LOGIN_HASH_SHA1 = 0x02;
@@ -76,5 +86,21 @@ namespace GG4NET
         public const uint GG_USER_OFFLINE = 0x01;
         public const uint GG_USER_NORMAL = 0x03;
         public const uint GG_USER_BLOCKED = 0x04;
+
+        public const ushort GG_TYPING_NOTIFY_TYPE_START = 0x0001;
+        public const ushort GG_TYPING_NOTIFY_TYPE_STOP = 0x0000;
+
+        public const byte GG_PUBDIR50_WRITE = 0x01;
+        public const byte GG_PUBDIR50_READ = 0x02;
+        public const byte GG_PUBDIR50_SEARCH = 0x03;
+        public const byte GG_PUBDIR50_SEARCH_REPLY = 0x05;
+
+        public const uint GG_PUBDIR50_GENDER_FEMALE = 1;
+        public const uint GG_PUBDIR50_GENDER_MALE = 2;
+        public const uint GG_PUBDIR50_GENDER_SET_FEMALE = 2;
+        public const uint GG_PUBDIR50_GENDER_SET_MALE = 1;
+
+        public const uint GG_PUBDIR50_ACTIVE_TRUE = 1;
+        public const uint GG_PUBDIR50_ACTIVE_FALSE = 0;
     }
 }
