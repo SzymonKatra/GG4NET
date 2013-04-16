@@ -1,49 +1,86 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
+﻿
 namespace GG4NET
 {
+    /// <summary>
+    /// Dostępne porty serwera GG.
+    /// </summary>
     public enum GGPort
     {
+        /// <summary>
+        /// Brak.
+        /// </summary>
         None = 0,
+        /// <summary>
+        /// Port 8074 (domyślny)
+        /// </summary>
         P8074 = 8074,
+        /// <summary>
+        /// Port 443 (dodatkowy, HTTPS)
+        /// </summary>
         P443 = 443,
     }
 
+    /// <summary>
+    /// Dostępne statusy GG.
+    /// </summary>
     public enum Status
     {
+        /// <summary>Brak.</summary>
         None = 0,
+        /// <summary>Niedostępny.</summary>
         NotAvailable,
+        /// <summary>Dostępny.</summary>
         Available,
+        /// <summary>Zaraz wracam.</summary>
         Busy,
+        /// <summary>Niewidoczny.</summary>
         Invisible,
+        /// <summary>Nie przeszkadzać.</summary>
         DoNotDisturb,
+        /// <summary>PoGGadaj ze mną.</summary>
         FreeForCall,
+        /// <summary>Zablokowany.</summary>
         Blocked,
     }
 
+    /// <summary>
+    /// Dostępny typy kontaktów GG.
+    /// </summary>
     public enum ContactType
     {
+        /// <summary>Brak.</summary>
         None = 0,
+        /// <summary>Kontakt dla którego będziemy zawsze niedostępni.</summary>
         Offline,
+        /// <summary>Normalny kontakt.</summary>
         Normal,
+        /// <summary>Zablokowany kontakt.</summary>
         Blocked,
     }
 
+    /// <summary>
+    /// Dostępne tryby powiadomienia o pisaniu.
+    /// </summary>
     public enum TypingNotifyType
     {
+        /// <summary>Brak.</summary>
         None = 0,
+        /// <summary>Zaczęto pisanie.</summary>
         Start,
+        /// <summary>Brak tekstu.</summary>
         Stop,
     }
 
+    /// <summary>
+    /// Dostępne płcie na GG.
+    /// </summary>
     public enum Gender
     {
+        /// <summary>Brak.</summary>
         None,
+        /// <summary>Kobieta.</summary>
         Female,
+        /// <summary>Mężczyzna.</summary>
         Male,
     }
 }

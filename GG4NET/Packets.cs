@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Security.Cryptography;
 using System.Text;
 using System.Net;
 
@@ -13,6 +12,8 @@ namespace GG4NET
             using (PacketReader reader = new PacketReader(data))
             {
                 seed = reader.ReadUInt32(); //seed
+
+                reader.Close();
             }
         }
         public static void ReadReceiveMessage(byte[] data, out uint uin, out uint seq, out DateTime time, out string plainMessage, out string htmlMessage, out byte[] attributes)
@@ -29,6 +30,8 @@ namespace GG4NET
                 htmlMessage = Encoding.UTF8.GetString(reader.ReadBytes((int)(plain_offset - 24))); //read html plainMessage
                 plainMessage = Encoding.ASCII.GetString(reader.ReadBytes((int)(attrib_offset - plain_offset))); //read plain plainMessage
                 attributes = reader.ReadBytes((int)(data.Length - reader.BaseStream.Position)); //attributes
+
+                reader.Close();
             }
         }
         public static void ReadNotifyReply(byte[] data, out List<ContactInfo> contacts)
@@ -60,6 +63,8 @@ namespace GG4NET
 
                     contacts.Add(contact);
                 }
+
+                reader.Close();
             }
         }
         public static void ReadMultiloginInfo(byte[] data, out MultiloginInfo[] infos)
@@ -82,6 +87,8 @@ namespace GG4NET
                     byte[] clientName = reader.ReadBytes((int)clientNameSize); //client name
                     infos[i].ClientName = Encoding.UTF8.GetString(clientName);
                 }
+
+                reader.Close();
             }
         }
         public static void ReadTypingNotify(byte[] data, out uint uin, out TypingNotifyType type, out ushort length)
@@ -91,6 +98,8 @@ namespace GG4NET
                 length = reader.ReadUInt16(); //type or length
                 type = (length >= 1 ? TypingNotifyType.Start : TypingNotifyType.Stop);
                 uin = reader.ReadUInt32(); //gg num
+
+                reader.Close();
             }
         }
         public static void ReadPublicDirectoryReply(byte[] data, out PublicDirectoryReply[] persons, out uint nextStart)
@@ -158,6 +167,17 @@ namespace GG4NET
                 }
                 if (listPersons[pos].Uin <= 0) listPersons.RemoveAt(pos);
                 persons = listPersons.ToArray();
+
+                reader.Close();
+            }
+        }
+        public static void ReadXmlMessage(byte[] data, out string message)
+        {
+            using (PacketReader reader = new PacketReader(data))
+            {
+                message = Encoding.UTF8.GetString(reader.ReadBytes(data.Length));
+
+                reader.Close();
             }
         }
 
@@ -238,7 +258,7 @@ namespace GG4NET
             {
                 byte[] desc = Encoding.UTF8.GetBytes(description);
 
-                writer.Write(Utils.ToInternalStatus(status, (description != string.Empty)) | Container.GG_STATUS_DESCR_MASK); //status
+                writer.Write(Utils.ToInternalStatus(status, (description != string.Empty))/* | Container.GG_STATUS_DESCR_MASK*/); //status
                 writer.Write(Container.GG_STATUS_FLAG_LINKS_FROM_UNKNOWN); //flags
                 writer.Write((uint)desc.Length); //description length
                 if (description != string.Empty) writer.Write(desc); //description

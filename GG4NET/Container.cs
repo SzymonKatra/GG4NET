@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
+﻿
 namespace GG4NET
 {
     internal static class Container
@@ -41,6 +36,8 @@ namespace GG4NET
 
         public const uint GG_PUBDIR50_REQUEST = 0x0014;
         public const uint GG_PUBDIR50_REPLY = 0x000e;
+
+        public const uint GG_XML_ACTION = 0x002c;
 
 
         public const byte GG_LOGIN_HASH_GG32 = 0x01;

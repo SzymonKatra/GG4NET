@@ -6,6 +6,9 @@ using System.Threading;
 
 namespace GG4NET
 {
+    /// <summary>
+    /// Klasa używana do obsługi Gadu-Gadu
+    /// </summary>
     public class GaduGaduClient : IDisposable
     {
         #region Properties
@@ -22,8 +25,17 @@ namespace GG4NET
         private System.Timers.Timer _pingTimer;
         private bool _disposed = false;
 
+        /// <summary>
+        /// Numer GG
+        /// </summary>
         public uint Uin { get { return _uin; } }
+        /// <summary>
+        /// Hasło do GG
+        /// </summary>
         public string Password { get { return _pass; } }
+        /// <summary>
+        /// Status
+        /// </summary>
         public Status Status
         {
             get
@@ -36,6 +48,9 @@ namespace GG4NET
                 if (_isLogged) Send(Packets.WriteStatus(_status, _description));
             }
         }
+        /// <summary>
+        /// Opis
+        /// </summary>
         public string Description
         {
             get
@@ -48,26 +63,49 @@ namespace GG4NET
                 if (_isLogged) Send(Packets.WriteStatus(_status, _description));
             }
         }
+        /// <summary>
+        /// Czy zalogowany?
+        /// </summary>
         public bool IsLogged { get { return _isLogged; } }
         #endregion
 
         #region Events
+        /// <summary>Wywołany gdy łączenie z serwerem GG nie powiedzie się</summary>
         public event EventHandler ConnectFailed = null;
+        /// <summary>Wywołany gdy logowanie do serwera GG nie powiedzie się</summary>
         public event EventHandler LoginFailed = null;
+        /// <summary>Wywołany gdy szukanie serwera GG nie powiedzie się</summary>
         public event EventHandler ServerObtainingFailed = null;
+        /// <summary>Wywołany gdy łączenie z serwerem GG powiedzie się</summary>
         public event EventHandler Connected = null;
+        /// <summary>Wywołany gdy utracimy połączenie z serwerem GG</summary>
         public event EventHandler Disconnected = null;
+        /// <summary>Wywołany gdy logowanie do serwera GG powiedzie się</summary>
         public event EventHandler Logged = null;
+        /// <summary>Wywołany gdy szukanie serwera GG powiedzie się</summary>
         public event EventHandler ServerObtained = null;
+        /// <summary>Wywołany status użytkownika z naszej listy kontaktów został zmieniony</summary>
         public event EventHandler<StatusEventArgs> StatusChanged = null;
+        /// <summary>Wywołany gdy otrzymamy od kogoś wiadomość</summary>
         public event EventHandler<MessageEventArgs> MessageReceived = null;
-        public event EventHandler NoMailNotify = null;
-        public event EventHandler<MultiloginEventArgs> MultiloginNotify = null;
+        /// <summary>Wywołany gdy serwer GG prosi nas o uzupełnienie adresu e-mail w profilu</summary>
+        public event EventHandler NoMailNotifyReceived = null;
+        /// <summary>Wywołany gdy wykryto innego użytkownika zalogowanego na ten numerem</summary>
+        public event EventHandler<MultiloginEventArgs> MultiloginNotifyReceived = null;
+        /// <summary>Wywołany gdy otrzymamy powiadomienie o pisaniu</summary>
         public event EventHandler<TypingNotifyEventArgs> TypingNotifyReceived = null;
+        /// <summary>Wywołany gdy otrzymamy odpowiedź publicznego katalogu</summary>
         public event EventHandler<PublicDirectoryReplyEventArgs> PublicDirectoryReplyReceived = null;
+        /// <summary>Wywołany gdy otrzymamy od serwera wiadomość XML</summary>
+        public event EventHandler<XmlMessageEventArgs> XmlMessageReceived = null;
         #endregion
 
         #region Constructors
+        /// <summary>
+        /// Stwórz klienta Gadu-Gadu
+        /// </summary>
+        /// <param name="uin">Numer GG</param>
+        /// <param name="password">Hasło do danego numerka</param>
         public GaduGaduClient(uint uin, string password)
         {
             _uin = uin;
@@ -77,16 +115,27 @@ namespace GG4NET
 
         #region Methods
         #region Common
+        /// <summary>
+        /// Znajdź serwer GG i połącz się z nim pod domyślnym portem.
+        /// </summary>
         public void Connect()
         {
             Connect(GGPort.P8074);
         }
+        /// <summary>
+        /// Znajdź serwer GG i połącz się z nim pod podanym portem.
+        /// </summary>
+        /// <param name="port">Port użyty do połączenia</param>
         public void Connect(GGPort port)
         {
             if (_socket != null) if (_socket.Connected) throw new Exception("You are already connected! Call Disconnect method");
 
             if (!ThreadPool.QueueUserWorkItem(ObtainServer, port)) ObtainServer(port);         
         }
+        /// <summary>
+        /// Połącz się z serwerem GG o podanym punkcie końcowym.
+        /// </summary>
+        /// <param name="serverEp">Punkt końcowy serwera GG</param>
         public virtual void Connect(EndPoint serverEp)
         {
             if (_socket != null) if (_socket.Connected) throw new Exception("You are already connected! Call Disconnect method");
@@ -95,24 +144,51 @@ namespace GG4NET
             _socket = new Socket(_serverEp.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
             _socket.BeginConnect(_serverEp, new AsyncCallback(OnConnectCallback), _socket);
         }
+        /// <summary>
+        /// Rozłącz się z serwerem GG.
+        /// </summary>
         public void Disconnect()
         {
             if (_socket == null) throw new Exception("You are not connected!");
             _socket.BeginDisconnect(false, new AsyncCallback(OnDisconnectCallback), _socket);
         }
 
+        /// <summary>
+        /// Wyślij wiadomość na dany numerek GG.
+        /// </summary>
+        /// <param name="recipient">Odbiorca</param>
+        /// <param name="message">Wiadomość</param>
         public void SendMessage(uint recipient, string message)
         {
             SendMessage(recipient, message, string.Format("<span style=\"color:#000000; font-family:'MS Shell Dlg 2'; font-size:9pt; \">{0}</span>\0", message), null);
         }
+        /// <summary>
+        /// Wyślij wiadomość na dany numerek GG.
+        /// </summary>
+        /// <param name="recipient">Odbiorca</param>
+        /// <param name="message">Wiadomość</param>
+        /// <param name="attributes">Atrybuty wiadomości</param>
         public void SendMessage(uint recipient, string message, byte[] attributes)
         {
             SendMessage(recipient, message, string.Format("<span style=\"color:#000000; font-family:'MS Shell Dlg 2'; font-size:9pt; \">{0}</span>\0", message), attributes);
         }
+        /// <summary>
+        /// Wyślij wiadomość na dany numerek GG.
+        /// </summary>
+        /// <param name="recipient">Odbiorca</param>
+        /// <param name="message">Wiadomość</param>
+        /// <param name="htmlMessage">Wiadomość w formacie HTML</param>
         public void SendMessage(uint recipient, string message, string htmlMessage)
         {
             SendMessage(recipient, message, htmlMessage, null);
         }
+        /// <summary>
+        /// Wyślij wiadomość na dany numerek GG.
+        /// </summary>
+        /// <param name="recipient">Odbiorca</param>
+        /// <param name="message">Wiadomość</param>
+        /// <param name="htmlMessage">Wiadomość w formacie HTML</param>
+        /// <param name="attributes">Atrybuty wiadomości</param>
         public void SendMessage(uint recipient, string message, string htmlMessage, byte[] attributes)
         {
             if (_isLogged)
@@ -122,32 +198,59 @@ namespace GG4NET
             else throw new NotLoggedException("You are not logged to GG network!");
         }
 
+        /// <summary>
+        /// Dodaj numerek GG do listy kontaktów aby otrzymywać od niego powiadomienia o statusie.
+        /// </summary>
+        /// <param name="uin">Numerek GG</param>
         public void AddNotify(uint uin)
         {
             AddNotify(uin, ContactType.Normal);
         }
+        /// <summary>
+        /// Dodaj numerek GG do listy kontaktów aby otrzymywać od niego powiadomienia o statusie.
+        /// </summary>
+        /// <param name="uin">Numerek GG</param>
+        /// <param name="type">Typ kontaktu</param>
         public void AddNotify(uint uin, ContactType type)
         {
             _contactList.Add(new ContactInfo() { Uin = uin, Type = type });
             if (_isLogged) Send(Packets.WriteAddNotify(uin, type));
         }
+        /// <summary>
+        /// Usuń numerek GG z listy kontaktów aby nie otrzymywać od niego powiadomień o statusie.
+        /// </summary>
+        /// <param name="uin">Numerek GG</param>
         public void RemoveNotify(uint uin)
         {
             ContactInfo ci = _contactList.Find(x => x.Uin == uin);
             _contactList.Remove(ci);
             if (_isLogged) Send(Packets.WriteRemoveNotify(uin, ci.Type));
         }
+        /// <summary>
+        /// Usuń numerek GG z listy kontaktów aby nie otrzymywać od niego powiadomień o statusie.
+        /// </summary>
+        /// <param name="uin">Numerek GG</param>
+        /// <param name="type">Typ kontaktu</param>
         public void RemoveNotify(uint uin, ContactType type)
         {
             ContactInfo ci = _contactList.Find(x => x.Uin == uin);
             _contactList.Remove(ci);
             if (_isLogged) Send(Packets.WriteRemoveNotify(uin, type));
         }
+        /// <summary>
+        /// Zdobądź informację o podanym numerku GG dodanym do listy kontaktów.
+        /// </summary>
+        /// <param name="uin">Numerek GG</param>
         public ContactInfo GetNotifyInfo(uint uin)
         {
             return _contactList.Find(x => x.Uin == uin);
         }
 
+        /// <summary>
+        /// Wyślij powiadomienie o pisaniu na dany numer GG.
+        /// </summary>
+        /// <param name="uin">Numer GG</param>
+        /// <param name="length">Długość wiadomości</param>
         public void SendTypingNotify(uint uin, ushort length)
         {
             if (_isLogged)
@@ -156,6 +259,12 @@ namespace GG4NET
             }
             else throw new NotLoggedException("You are not logged to GG network!");
         }
+        /// <summary>
+        /// Wyślij powiadomienie o pisaniu na dany numer GG.
+        /// </summary>
+        /// <param name="uin">Numer GG</param>
+        /// <param name="type">Typ powiadomienia</param>
+        /// <param name="length">Długość wiadomości</param>
         public void SendTypingNotify(uint uin, TypingNotifyType type, ushort length)
         {
             if (_isLogged)
@@ -165,14 +274,40 @@ namespace GG4NET
             else throw new NotLoggedException("You are not logged to GG network!");
         }
 
-        public void SendPublicDirectoryRequest(uint uin, string firstName, string lastName, string nickname, int startBirthYear, int stopBirthYear, string city, Gender gender, bool activeOnly, string familyName, string familyCity, uint uinStart)
+        /// <summary>
+        /// Wyślij zapytanie do publicznego katalogu GG.
+        /// </summary>
+        /// <param name="uin">Numer GG</param>
+        /// <param name="firstName">Imię</param>
+        /// <param name="lastName">Nazwisko</param>
+        /// <param name="nickname">Przezwisko</param>
+        /// <param name="startBirthYear">Początkowy rok urodzenia</param>
+        /// <param name="stopBirthYear">Końcowy rok urodzenia (0 jeśli chcesz znaleźć osoby urodzone w roku podanym we wcześniejszym parametrze)</param>
+        /// <param name="city">Miejsce zamieszkania</param>
+        /// <param name="gender">Płeć</param>
+        /// <param name="activeOnly">Wyszukuj tylko dostępnych?</param>
+        /// <param name="familyName">Nazwisko panieńskie</param>
+        /// <param name="familyCity">Miejsce zamieszkania w czasie dzieciństwa</param>
+        /// <param name="startSearch">Zacznić wyszukiwać od indeksu</param>
+        public void SendPublicDirectoryRequest(uint uin, string firstName, string lastName, string nickname, int startBirthYear, int stopBirthYear, string city, Gender gender, bool activeOnly, string familyName, string familyCity, uint startSearch)
         {
             if (_isLogged)
             {
-                Send(Packets.WritePublicDirectoryRequest(Container.GG_PUBDIR50_SEARCH, uin, firstName, lastName, nickname, startBirthYear, stopBirthYear, city, gender, activeOnly, familyName, familyCity, uinStart));
+                Send(Packets.WritePublicDirectoryRequest(Container.GG_PUBDIR50_SEARCH, uin, firstName, lastName, nickname, startBirthYear, stopBirthYear, city, gender, activeOnly, familyName, familyCity, startSearch));
             }
             else throw new NotLoggedException("You are not logged to GG network!");
         }
+        /// <summary>
+        /// Zapisz swoje dane do publicznego katalogu GG.
+        /// </summary>
+        /// <param name="firstName">Imię</param>
+        /// <param name="lastName">Nazwisko</param>
+        /// <param name="nickname">Przezwisko</param>
+        /// <param name="birthYear">Rok urodzenia</param>
+        /// <param name="city">Miejsce zamieszkania</param>
+        /// <param name="gender">Płeć</param>
+        /// <param name="familyName">Nazwisko panieńskie</param>
+        /// <param name="familyCity">Miejsce zamieszkania w czasie dzieciństwa</param>
         public void SendMyDataToPublicDirectory(string firstName, string lastName, string nickname, int birthYear, string city, Gender gender, string familyName, string familyCity)
         {
             if (_isLogged)
@@ -181,6 +316,9 @@ namespace GG4NET
             }
             else throw new NotLoggedException("You are not logged to GG network!");
         }
+        /// <summary>
+        /// Zdobądź moje dane z publicznego katalogu GG. Zostaną przysłane w zdarzeniu PublicDirectoryReplyReceived.
+        /// </summary>
         public void GetMyDataFromPublicDirectory()
         {
             if (_isLogged)
@@ -192,6 +330,10 @@ namespace GG4NET
         #endregion
 
         #region Other
+        /// <summary>
+        /// Wyślij dane.
+        /// </summary>
+        /// <param name="data">Dane</param>
         protected void Send(byte[] data)
         {
             if (_socket == null || !_socket.Connected) throw new Exception("You are not connected!");
@@ -233,6 +375,8 @@ namespace GG4NET
                 case Container.GG_TYPING_NOTIFY: ProcessTypingNotify(e.Data); break;
 
                 case Container.GG_PUBDIR50_REPLY: ProcessPublicDirectoryReply(e.Data); break;
+
+                case Container.GG_XML_ACTION: ProcessXmlMessage(e.Data); break;
             }
         }
         private void CloseSocket()
@@ -248,12 +392,20 @@ namespace GG4NET
         #endregion
 
         #region PacketProcessors
+        /// <summary>
+        /// Przetwórz pakiet powitalny.
+        /// </summary>
+        /// <param name="data">Dane</param>
         protected virtual void ProcessWelcome(byte[] data)
         {
             uint seed;
             Packets.ReadWelcome(data, out seed);
             Send(Packets.WriteLogin(_uin, _pass, seed, _status, _description));
         }
+        /// <summary>
+        /// Przetwórz pakiet o pomyślnym logowaniu.
+        /// </summary>
+        /// <param name="data">Dane</param>
         protected virtual void ProcessLoginOk(byte[] data)
         {
             Send(Packets.WriteEmptyContactList());
@@ -275,11 +427,19 @@ namespace GG4NET
             _isLogged = true;
             OnLogged();
         }
+        /// <summary>
+        /// Przetwórz pakiet niepomyślnym logowaniu.
+        /// </summary>
+        /// <param name="data">Dane</param>
         protected virtual void ProcessLoginFailed(byte[] data)
         {
             _isLogged = false;
             OnLoginFailed();
         }
+        /// <summary>
+        /// Przetwórz pakiet o przysłanej wiadomości.
+        /// </summary>
+        /// <param name="data">Dane</param>
         protected virtual void ProcessReceiveMessage(byte[] data)
         {
             uint uin;
@@ -293,6 +453,10 @@ namespace GG4NET
             Send(Packets.WriteReceiveAck(seq));
             OnMessageReceived(new MessageEventArgs(uin, time, plain, html, attrib)); 
         }
+        /// <summary>
+        /// Przetwórz pakiet o zmianie statusu osoby z listy kontaktów.
+        /// </summary>
+        /// <param name="data">Dane</param>
         protected virtual void ProcessNotifyReply(byte[] data)
         {
             List<ContactInfo> conList;
@@ -319,16 +483,28 @@ namespace GG4NET
                 }
             }
         }
+        /// <summary>
+        /// Przetwórz pakiet o informacji od serwera o braku adresu e-mail w profilu.
+        /// </summary>
+        /// <param name="data">Dane</param>
         protected virtual void ProcessNeedEmail(byte[] data)
         {
-            OnNoMailNotify();
+            OnNoMailNotifyReceived();
         }
+        /// <summary>
+        /// Przetwórz pakiet na temat multilogowania.
+        /// </summary>
+        /// <param name="data">Dane</param>
         protected virtual void ProcessMultilogonInfo(byte[] data)
         {
             MultiloginInfo[] infos;
             Packets.ReadMultiloginInfo(data, out infos);
-            foreach (MultiloginInfo info in infos) OnMultiloginNotify(new MultiloginEventArgs(info));
+            foreach (MultiloginInfo info in infos) OnMultiloginNotifyReceived(new MultiloginEventArgs(info));
         }
+        /// <summary>
+        /// Przetwórz pakiet w którym są zawarte informacje na temat aktualnie wpisywanej wiadomości od kogoś innego.
+        /// </summary>
+        /// <param name="data">Dane</param>
         protected virtual void ProcessTypingNotify(byte[] data)
         {
             uint uin;
@@ -339,6 +515,10 @@ namespace GG4NET
 
             OnTypingNotifyReceived(new TypingNotifyEventArgs(uin, type, length));
         }
+        /// <summary>
+        /// Przetwórz pakiet w którym zawarta jest odpowiedź na zapytanie do publicznego katalogu GG.
+        /// </summary>
+        /// <param name="data">Dane</param>
         protected virtual void ProcessPublicDirectoryReply(byte[] data)
         {
             PublicDirectoryReply[] reply;
@@ -346,9 +526,24 @@ namespace GG4NET
             Packets.ReadPublicDirectoryReply(data, out reply, out ns);
             OnPublicDirectoryReplyReceived(new PublicDirectoryReplyEventArgs(reply, ns));
         }
+        /// <summary>
+        /// Przetwórz pakiet w którym została przysłana wiadomość XML.
+        /// </summary>
+        /// <param name="data">Dane</param>
+        protected virtual void ProcessXmlMessage(byte[] data)
+        {
+            string msg;
+            Packets.ReadXmlMessage(data, out msg);
+
+            OnXmlMessageReceived(new XmlMessageEventArgs(msg));
+        }
         #endregion
 
         #region Callback
+        /// <summary>
+        /// Metoda zwrotna łączenia.
+        /// </summary>
+        /// <param name="result">Rezultat</param>
         protected void OnConnectCallback(IAsyncResult result)
         {
             try
@@ -364,7 +559,11 @@ namespace GG4NET
                 _pingTimer.Start();
             }
             catch { OnConnectFailed(); CloseSocket(); }
-        }       
+        }
+        /// <summary>
+        /// Metoda zwrotna rozłączenia.
+        /// </summary>
+        /// <param name="result">Rezultat</param>
         protected void OnDisconnectCallback(IAsyncResult result)
         {
             try
@@ -375,6 +574,10 @@ namespace GG4NET
             CloseSocket();
             OnDisconnected();
         }
+        /// <summary>
+        /// Metoda zwrotna przysłanych danych.
+        /// </summary>
+        /// <param name="result">Rezultat</param>
         protected void OnReceiveCallback(IAsyncResult result)
         {
             try
@@ -389,6 +592,10 @@ namespace GG4NET
             }
             catch { CloseSocket(); OnDisconnected(); }
         }
+        /// <summary>
+        /// Metoda zwrotna wysyłania danych.
+        /// </summary>
+        /// <param name="result">Rezultat</param>
         protected void OnSendCallback(IAsyncResult result)
         {
             try
@@ -400,66 +607,97 @@ namespace GG4NET
         #endregion
 
         #region EventPerformers
+        /// <summary>Wywołuje zdarzenie ConnectFailed.</summary>
         protected virtual void OnConnectFailed()
         {
             if (ConnectFailed != null) ConnectFailed(this, EventArgs.Empty);
         }
+        /// <summary>Wywołuje zdarzenie LoginFailed.</summary>
         protected virtual void OnLoginFailed()
         {
             if (LoginFailed != null) LoginFailed(this, EventArgs.Empty);
         }
+        /// <summary>Wywołuje zdarzenie ServerObtainingFailed.</summary>
         protected virtual void OnServerObtainingFailed()
         {
             if (ServerObtainingFailed != null) ServerObtainingFailed(this, EventArgs.Empty);
         }
+        /// <summary>Wywołuje zdarzenie Connected.</summary>
         protected virtual void OnConnected()
         {
             if (Connected != null) Connected(this, EventArgs.Empty);
         }
+        /// <summary>Wywołuje zdarzenie Disconnected.</summary>
         protected virtual void OnDisconnected()
         {
             if (Disconnected != null) Disconnected(this, EventArgs.Empty);
         }
+        /// <summary>Wywołuje zdarzenie Logged.</summary>
         protected virtual void OnLogged()
         {
             if (Logged != null) Logged(this, EventArgs.Empty);
         }
+        /// <summary>Wywołuje zdarzenie ServerObtained.</summary>
         protected virtual void OnServerObtained()
         {
             if (ServerObtained != null) ServerObtained(this, EventArgs.Empty);
         }
+        /// <summary>Wywołuje zdarzenie StatusChanged.</summary>
+        /// <param name="e">Parametry</param>
         protected virtual void OnStatusChanged(StatusEventArgs e)
         {
             if (StatusChanged != null) StatusChanged(this, e);
         }
+        /// <summary>Wywołuje zdarzenie MessageReceived.</summary>
+        /// <param name="e">Parametry</param>
         protected virtual void OnMessageReceived(MessageEventArgs e)
         {
             if (MessageReceived != null) MessageReceived(this, e);
         }
-        protected virtual void OnNoMailNotify()
+        /// <summary>Wywołuje zdarzenie NoMailNotifyReceive.</summary>
+        protected virtual void OnNoMailNotifyReceived()
         {
-            if (NoMailNotify != null) NoMailNotify(this, EventArgs.Empty);
+            if (NoMailNotifyReceived != null) NoMailNotifyReceived(this, EventArgs.Empty);
         }
-        protected virtual void OnMultiloginNotify(MultiloginEventArgs e)
+        /// <summary>Wywołuje zdarzenie MultilogonNotifyReceived.</summary>
+        /// <param name="e">Parametry</param>
+        protected virtual void OnMultiloginNotifyReceived(MultiloginEventArgs e)
         {
-            if (MultiloginNotify != null) MultiloginNotify(this, e);
+            if (MultiloginNotifyReceived != null) MultiloginNotifyReceived(this, e);
         }
+        /// <summary>Wywołuje zdarzenie TypingNotifyReceived.</summary>
+        /// <param name="e">Parametry</param>
         protected virtual void OnTypingNotifyReceived(TypingNotifyEventArgs e)
         {
             if (TypingNotifyReceived != null) TypingNotifyReceived(this, e);
         }
+        /// <summary>Wywołuje zdarzenie PublicDirectoryReplyReceived.</summary>
+        /// <param name="e">Parametry</param>
         protected virtual void OnPublicDirectoryReplyReceived(PublicDirectoryReplyEventArgs e)
         {
             if (PublicDirectoryReplyReceived != null) PublicDirectoryReplyReceived(this, e);
         }
+        /// <summary>Wywołuje zdarzenie XmlMessageReceived.</summary>
+        /// <param name="e">Parametry</param>
+        protected virtual void OnXmlMessageReceived(XmlMessageEventArgs e)
+        {
+            if (XmlMessageReceived != null) XmlMessageReceived(this, e);
+        }
         #endregion
 
         #region Dispose
+        /// <summary>
+        /// Znisz obiekt klienta GG.
+        /// </summary>
         public void Dispose()
         {
             Dispose(true);
             GC.SuppressFinalize(this);
         }
+        /// <summary>
+        /// Znisz obiekt klienta GG.
+        /// </summary>
+        /// <param name="disposing">Niszczyć zasoby niezarządzane?</param>
         protected virtual void Dispose(bool disposing)
         {
             if (!_disposed)
@@ -467,8 +705,19 @@ namespace GG4NET
                 if (disposing)
                 {
                     //managed
-                    _socket.Dispose();
+                    CloseSocket();
                     _buffer = null;
+                    _uin = 0;
+                    _pass = null;
+                    _status = GG4NET.Status.None;
+                    _description = null;
+                    _contactList = null;
+                    _serverEp = null;
+                    _socket = null;
+                    _receiver = null;
+                    _isLogged = false;
+                    _pingTimer.Dispose();
+                    _pingTimer = null;
                 }
 
                 //unmanaged
@@ -476,6 +725,9 @@ namespace GG4NET
                 _disposed = true;
             }
         }
+        /// <summary>
+        /// Destruktor.
+        /// </summary>
         ~GaduGaduClient()
         {
             Dispose(false);
