@@ -96,8 +96,10 @@ namespace GG4NET
         public event EventHandler<TypingNotifyEventArgs> TypingNotifyReceived = null;
         /// <summary>Wywołany gdy otrzymamy odpowiedź publicznego katalogu</summary>
         public event EventHandler<PublicDirectoryReplyEventArgs> PublicDirectoryReplyReceived = null;
-        /// <summary>Wywołany gdy otrzymamy od serwera wiadomość XML</summary>
-        public event EventHandler<XmlMessageEventArgs> XmlMessageReceived = null;
+        /// <summary>Wywołany gdy otrzymamy od serwera wiadomość XML GG Live</summary>
+        public event EventHandler<XmlMessageEventArgs> XmlGGLiveMessageReceived = null;
+        /// <summary>Wywołany gdy otrzymamy od serwera wiadomość systemowa XML</summary>
+        public event EventHandler<XmlMessageEventArgs> XmlSystemMessageReceived = null;
         #endregion
 
         #region Constructors
@@ -376,7 +378,9 @@ namespace GG4NET
 
                 case Container.GG_PUBDIR50_REPLY: ProcessPublicDirectoryReply(e.Data); break;
 
-                case Container.GG_XML_ACTION: ProcessXmlMessage(e.Data); break;
+                case Container.GG_XML_ACTION: ProcessXmlGGLiveMessage(e.Data); break;
+
+                case Container.GG_XML_EVENT: ProcessXmlSystemMessage(e.Data); break;
             }
         }
         private void CloseSocket()
@@ -527,15 +531,26 @@ namespace GG4NET
             OnPublicDirectoryReplyReceived(new PublicDirectoryReplyEventArgs(reply, ns));
         }
         /// <summary>
-        /// Przetwórz pakiet w którym została przysłana wiadomość XML.
+        /// Przetwórz pakiet w którym została przysłana wiadomość XML GGLive.
         /// </summary>
         /// <param name="data">Dane</param>
-        protected virtual void ProcessXmlMessage(byte[] data)
+        protected virtual void ProcessXmlGGLiveMessage(byte[] data)
         {
             string msg;
             Packets.ReadXmlMessage(data, out msg);
 
-            OnXmlMessageReceived(new XmlMessageEventArgs(msg));
+            OnXmlGGLiveMessageReceived(new XmlMessageEventArgs(msg));
+        }
+        /// <summary>
+        /// Przetwórz pakiet w którym została przysłana wiadomość XML system.
+        /// </summary>
+        /// <param name="data">Dane</param>
+        protected virtual void ProcessXmlSystemMessage(byte[] data)
+        {
+            string msg;
+            Packets.ReadXmlMessage(data, out msg);
+
+            OnXmlSystemMessageReceived(new XmlMessageEventArgs(msg));
         }
         #endregion
 
@@ -677,11 +692,17 @@ namespace GG4NET
         {
             if (PublicDirectoryReplyReceived != null) PublicDirectoryReplyReceived(this, e);
         }
-        /// <summary>Wywołuje zdarzenie XmlMessageReceived.</summary>
+        /// <summary>Wywołuje zdarzenie XmlGGLiveMessageReceived.</summary>
         /// <param name="e">Parametry</param>
-        protected virtual void OnXmlMessageReceived(XmlMessageEventArgs e)
+        protected virtual void OnXmlGGLiveMessageReceived(XmlMessageEventArgs e)
         {
-            if (XmlMessageReceived != null) XmlMessageReceived(this, e);
+            if (XmlGGLiveMessageReceived != null) XmlGGLiveMessageReceived(this, e);
+        }
+        /// <summary>Wywołuje zdarzenie XmlSystemMessageReceived.</summary>
+        /// <param name="e">Parametry</param>
+        protected virtual void OnXmlSystemMessageReceived(XmlMessageEventArgs e)
+        {
+            if (XmlSystemMessageReceived != null) XmlSystemMessageReceived(this, e);
         }
         #endregion
 

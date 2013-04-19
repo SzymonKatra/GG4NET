@@ -38,6 +38,7 @@ namespace GG4NET
         public const uint GG_PUBDIR50_REPLY = 0x000e;
 
         public const uint GG_XML_ACTION = 0x002c;
+        public const uint GG_XML_EVENT = 0x0027;
 
 
         public const byte GG_LOGIN_HASH_GG32 = 0x01;
