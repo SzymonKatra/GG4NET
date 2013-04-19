@@ -24,11 +24,11 @@ namespace GG4NET
                 seq = reader.ReadUInt32(); //sequence number = time from 1.1.1970
                 time = new DateTime(1970, 1, 1);
                 time.AddSeconds(reader.ReadUInt32());
-                reader.ReadUInt32(); // plainMessage class
+                reader.ReadUInt32(); // message class
                 uint plain_offset = reader.ReadUInt32(); //plain offset
                 uint attrib_offset = reader.ReadUInt32(); //attributes offset
-                htmlMessage = Encoding.UTF8.GetString(reader.ReadBytes((int)(plain_offset - 24))); //read html plainMessage
-                plainMessage = Encoding.ASCII.GetString(reader.ReadBytes((int)(attrib_offset - plain_offset))); //read plain plainMessage
+                htmlMessage = Encoding.UTF8.GetString(reader.ReadBytes((int)(plain_offset - 25))); //read html message
+                plainMessage = Encoding.GetEncoding("windows-1250").GetString(reader.ReadBytes((int)(attrib_offset - plain_offset))); //read plain message
                 attributes = reader.ReadBytes((int)(data.Length - reader.BaseStream.Position)); //attributes
 
                 reader.Close();
@@ -272,14 +272,14 @@ namespace GG4NET
             {
                 writer.Write(recipient); //gg num
                 writer.Write((uint)(DateTime.Now - new DateTime(1970, 1, 1)).TotalSeconds); //sequence number = time from 1.1.1970
-                writer.Write(Container.GG_CLASS_CHAT); //plainMessage class
+                writer.Write(Container.GG_CLASS_CHAT); //message class
                 byte[] html_msg = Encoding.UTF8.GetBytes(string.Format("{0}\0", htmlMessage));
-                byte[] plain_msg = Encoding.ASCII.GetBytes(string.Format("{0}\0", plainMessage));
-                writer.Write((uint)(html_msg.Length + 20)); //plain offset
+                byte[] plain_msg = Encoding.GetEncoding("windows-1250").GetBytes(string.Format("{0}\0", plainMessage));
+                writer.Write((uint)(html_msg.Length + 19)); //plain offset
                 writer.Write((uint)(html_msg.Length + plain_msg.Length)); //attrib offset
-                writer.Write(html_msg); //html plainMessage
-                writer.Write(plain_msg); //plain plainMessage
-                if (attributes != null) writer.Write(attributes); writer.Write((byte)0); //attributes
+                writer.Write(html_msg); //html message
+                writer.Write(plain_msg); //plain message
+                if (attributes != null) writer.Write(attributes); //attributes
 
                 return BuildHeader(Container.GG_SEND_MSG80, writer.Data);
             }
