@@ -218,12 +218,12 @@ namespace GG4NET
     public class StatusEventArgs : EventArgs
     {
         #region Properties
-        private ContactInfo _contact;
+        private UserInfo _contact;
 
         /// <summary>
         /// Informacje o kontakcie który zmienił status.
         /// </summary>
-        public ContactInfo Contact
+        public UserInfo Contact
         {
             get { return _contact; }
             set { _contact = value; }
@@ -235,14 +235,14 @@ namespace GG4NET
         /// Stwórz argumenty dla statusu.
         /// </summary>
         public StatusEventArgs()
-            : this(new ContactInfo())
+            : this(new UserInfo())
         {
         }
         /// <summary>
         /// Stwórz argumenty dla statusu.
         /// </summary>
         /// <param name="contact">Informacje o kontacie który zmienił status</param>
-        public StatusEventArgs(ContactInfo contact)
+        public StatusEventArgs(UserInfo contact)
         {
             _contact = contact;
         }

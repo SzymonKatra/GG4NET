@@ -43,7 +43,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ContactInfo.cs" />
+    <Compile Include="ContactList.cs" />
+    <Compile Include="UserInfo.cs" />
     <Compile Include="Container.cs" />
     <Compile Include="GaduGaduClient.cs" />
     <Compile Include="HTTPServices.cs" />

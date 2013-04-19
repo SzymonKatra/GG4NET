@@ -4,7 +4,7 @@ namespace GG4NET
     /// <summary>
     /// Informacje o kontakcie.
     /// </summary>
-    public struct ContactInfo
+    public struct UserInfo
     {
         /// <summary>
         /// Numer GG.

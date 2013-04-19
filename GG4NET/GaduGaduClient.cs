@@ -16,7 +16,7 @@ namespace GG4NET
         private string _pass = string.Empty;
         private Status _status = Status.Available;
         private string _description = string.Empty;
-        private List<ContactInfo> _contactList = new List<ContactInfo>();
+        private List<UserInfo> _contactList = new List<UserInfo>();
         private EndPoint _serverEp = new IPEndPoint(IPAddress.None, 0);
         private Socket _socket = null;
         private PacketReceiver _receiver = null;
@@ -215,7 +215,7 @@ namespace GG4NET
         /// <param name="type">Typ kontaktu</param>
         public void AddNotify(uint uin, ContactType type)
         {
-            _contactList.Add(new ContactInfo() { Uin = uin, Type = type });
+            _contactList.Add(new UserInfo() { Uin = uin, Type = type });
             if (_isLogged) Send(Packets.WriteAddNotify(uin, type));
         }
         /// <summary>
@@ -224,7 +224,7 @@ namespace GG4NET
         /// <param name="uin">Numerek GG</param>
         public void RemoveNotify(uint uin)
         {
-            ContactInfo ci = _contactList.Find(x => x.Uin == uin);
+            UserInfo ci = _contactList.Find(x => x.Uin == uin);
             _contactList.Remove(ci);
             if (_isLogged) Send(Packets.WriteRemoveNotify(uin, ci.Type));
         }
@@ -235,7 +235,7 @@ namespace GG4NET
         /// <param name="type">Typ kontaktu</param>
         public void RemoveNotify(uint uin, ContactType type)
         {
-            ContactInfo ci = _contactList.Find(x => x.Uin == uin);
+            UserInfo ci = _contactList.Find(x => x.Uin == uin);
             _contactList.Remove(ci);
             if (_isLogged) Send(Packets.WriteRemoveNotify(uin, type));
         }
@@ -243,7 +243,7 @@ namespace GG4NET
         /// Zdobądź informację o podanym numerku GG dodanym do listy kontaktów.
         /// </summary>
         /// <param name="uin">Numerek GG</param>
-        public ContactInfo GetNotifyInfo(uint uin)
+        public UserInfo GetNotifyInfo(uint uin)
         {
             return _contactList.Find(x => x.Uin == uin);
         }
@@ -463,9 +463,9 @@ namespace GG4NET
         /// <param name="data">Dane</param>
         protected virtual void ProcessNotifyReply(byte[] data)
         {
-            List<ContactInfo> conList;
+            List<UserInfo> conList;
             Packets.ReadNotifyReply(data, out conList);
-            foreach (ContactInfo item in conList)
+            foreach (UserInfo item in conList)
             {
                 if (item.Uin == _uin) //multilogin status adaptation
                 {

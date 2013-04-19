@@ -83,4 +83,23 @@ namespace GG4NET
         /// <summary>Mężczyzna.</summary>
         Male,
     }
+
+    /// <summary>
+    /// Typ listy kontaktów.
+    /// </summary>
+    public enum ContactListType
+    {
+        /// <summary>
+        /// Brak.
+        /// </summary>
+        None = 0,
+        /// <summary>
+        /// Format CSV. Używany przez starsze wersje GG.
+        /// </summary>
+        CSV,
+        /// <summary>
+        /// Format XML. Używany przez nowsze wersje GG.
+        /// </summary>
+        XML,
+    }
 }

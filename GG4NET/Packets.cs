@@ -34,9 +34,9 @@ namespace GG4NET
                 reader.Close();
             }
         }
-        public static void ReadNotifyReply(byte[] data, out List<ContactInfo> contacts)
+        public static void ReadNotifyReply(byte[] data, out List<UserInfo> contacts)
         {
-            contacts = new List<ContactInfo>();
+            contacts = new List<UserInfo>();
             using (PacketReader reader = new PacketReader(data))
             {
                 while (reader.BaseStream.Position < data.Length)
@@ -52,7 +52,7 @@ namespace GG4NET
                     uint descSize = reader.ReadUInt32(); //description size
                     byte[] desc = reader.ReadBytes((int)descSize); //description
 
-                    ContactInfo contact = new ContactInfo();
+                    UserInfo contact = new UserInfo();
                     contact.Uin = uin;
                     bool isDesc = false;
                     contact.Status = Utils.ToPublicStatus(status, out isDesc);
@@ -211,7 +211,7 @@ namespace GG4NET
                 return BuildHeader(Container.GG_LOGIN80, writer.Data);
             }
         }
-        public static byte[] WriteContactList(List<ContactInfo> contacts, ref int remainingStartOffset)
+        public static byte[] WriteContactList(List<UserInfo> contacts, ref int remainingStartOffset)
         {
             int toSend = Math.Min(400, contacts.Count - remainingStartOffset);        
 
