@@ -23,6 +23,7 @@ namespace GG4NET
         private bool _isLogged = false;
         private byte[] _buffer = null;
         private System.Timers.Timer _pingTimer;
+        private uint _lastContactListVersion = 0;
         private bool _disposed = false;
 
         /// <summary>
@@ -70,36 +71,40 @@ namespace GG4NET
         #endregion
 
         #region Events
-        /// <summary>Wywołany gdy łączenie z serwerem GG nie powiedzie się</summary>
+        /// <summary>Wywołany gdy łączenie z serwerem GG nie powiedzie się.</summary>
         public event EventHandler ConnectFailed = null;
-        /// <summary>Wywołany gdy logowanie do serwera GG nie powiedzie się</summary>
+        /// <summary>Wywołany gdy logowanie do serwera GG nie powiedzie się.</summary>
         public event EventHandler LoginFailed = null;
-        /// <summary>Wywołany gdy szukanie serwera GG nie powiedzie się</summary>
+        /// <summary>Wywołany gdy szukanie serwera GG nie powiedzie się.</summary>
         public event EventHandler ServerObtainingFailed = null;
-        /// <summary>Wywołany gdy łączenie z serwerem GG powiedzie się</summary>
+        /// <summary>Wywołany gdy łączenie z serwerem GG powiedzie się.</summary>
         public event EventHandler Connected = null;
-        /// <summary>Wywołany gdy utracimy połączenie z serwerem GG</summary>
+        /// <summary>Wywołany gdy utracimy połączenie z serwerem GG.</summary>
         public event EventHandler Disconnected = null;
-        /// <summary>Wywołany gdy logowanie do serwera GG powiedzie się</summary>
+        /// <summary>Wywołany gdy logowanie do serwera GG powiedzie się.</summary>
         public event EventHandler Logged = null;
-        /// <summary>Wywołany gdy szukanie serwera GG powiedzie się</summary>
+        /// <summary>Wywołany gdy szukanie serwera GG powiedzie się.</summary>
         public event EventHandler ServerObtained = null;
-        /// <summary>Wywołany status użytkownika z naszej listy kontaktów został zmieniony</summary>
+        /// <summary>Wywołany status użytkownika z naszej listy kontaktów został zmieniony.</summary>
         public event EventHandler<StatusEventArgs> StatusChanged = null;
-        /// <summary>Wywołany gdy otrzymamy od kogoś wiadomość</summary>
+        /// <summary>Wywołany gdy otrzymamy od kogoś wiadomość.</summary>
         public event EventHandler<MessageEventArgs> MessageReceived = null;
-        /// <summary>Wywołany gdy serwer GG prosi nas o uzupełnienie adresu e-mail w profilu</summary>
+        /// <summary>Wywołany gdy zostanie wysłana wiadomość z innego klienta zalogowanego na nasz numer.</summary>
+        public event EventHandler<MessageEventArgs> OwnMessageReceived = null;
+        /// <summary>Wywołany gdy serwer GG prosi nas o uzupełnienie adresu e-mail w profilu.</summary>
         public event EventHandler NoMailNotifyReceived = null;
-        /// <summary>Wywołany gdy wykryto innego użytkownika zalogowanego na ten numerem</summary>
+        /// <summary>Wywołany gdy wykryto innego użytkownika zalogowanego na ten numerem.</summary>
         public event EventHandler<MultiloginEventArgs> MultiloginNotifyReceived = null;
-        /// <summary>Wywołany gdy otrzymamy powiadomienie o pisaniu</summary>
+        /// <summary>Wywołany gdy otrzymamy powiadomienie o pisaniu.</summary>
         public event EventHandler<TypingNotifyEventArgs> TypingNotifyReceived = null;
-        /// <summary>Wywołany gdy otrzymamy odpowiedź publicznego katalogu</summary>
+        /// <summary>Wywołany gdy otrzymamy odpowiedź publicznego katalogu.</summary>
         public event EventHandler<PublicDirectoryReplyEventArgs> PublicDirectoryReplyReceived = null;
-        /// <summary>Wywołany gdy otrzymamy od serwera wiadomość XML GG Live</summary>
+        /// <summary>Wywołany gdy otrzymamy od serwera wiadomość XML GG Live.</summary>
         public event EventHandler<XmlMessageEventArgs> XmlGGLiveMessageReceived = null;
-        /// <summary>Wywołany gdy otrzymamy od serwera wiadomość systemowa XML</summary>
+        /// <summary>Wywołany gdy otrzymamy od serwera wiadomość systemowa XML.</summary>
         public event EventHandler<XmlMessageEventArgs> XmlSystemMessageReceived = null;
+        /// <summary>Wywołany gdy otrzymamy od serwera nową listę kontaktów.</summary>
+        public event EventHandler<ContactListEventArgs> ContactListReceived = null;
         #endregion
 
         #region Constructors
@@ -117,6 +122,7 @@ namespace GG4NET
 
         #region Methods
         #region Common
+        #region Connection
         /// <summary>
         /// Znajdź serwer GG i połącz się z nim pod domyślnym portem.
         /// </summary>
@@ -154,7 +160,9 @@ namespace GG4NET
             if (_socket == null) throw new Exception("You are not connected!");
             _socket.BeginDisconnect(false, new AsyncCallback(OnDisconnectCallback), _socket);
         }
+        #endregion
 
+        #region Messages
         /// <summary>
         /// Wyślij wiadomość na dany numerek GG.
         /// </summary>
@@ -199,7 +207,24 @@ namespace GG4NET
             }
             else throw new NotLoggedException("You are not logged to GG network!");
         }
+        #endregion
 
+        #region Multilogin
+        /// <summary>
+        /// Rozłącza podaną sesję multilogowania.
+        /// </summary>
+        /// <param name="connectionId">Indetyfikator połączenia.</param>
+        public void DisconnectMultiloginSession(ulong connectionId)
+        {
+            if (_isLogged)
+            {
+                Send(Packets.WriteDisconnectMultiloginSession(connectionId));
+            }
+            else throw new NotLoggedException("You are not logged to GG network!");
+        }
+        #endregion
+
+        #region Notify
         /// <summary>
         /// Dodaj numerek GG do listy kontaktów aby otrzymywać od niego powiadomienia o statusie.
         /// </summary>
@@ -247,7 +272,9 @@ namespace GG4NET
         {
             return _contactList.Find(x => x.Uin == uin);
         }
+        #endregion
 
+        #region TypingNotify
         /// <summary>
         /// Wyślij powiadomienie o pisaniu na dany numer GG.
         /// </summary>
@@ -275,7 +302,9 @@ namespace GG4NET
             }
             else throw new NotLoggedException("You are not logged to GG network!");
         }
+        #endregion
 
+        #region PublicDirectory
         /// <summary>
         /// Wyślij zapytanie do publicznego katalogu GG.
         /// </summary>
@@ -331,6 +360,33 @@ namespace GG4NET
         }
         #endregion
 
+        #region ContactList
+        /// <summary>
+        /// Importuje listę kontaktów z serwera. Zostanie przysłana w zdarzeniu ContactListReceived.
+        /// </summary>
+        public void ImportContactList()
+        {
+            if (_isLogged)
+            {
+                Send(Packets.WriteUserListRequest(Container.GG_USERLIST100_GET, 0, ContactListType.XML, null));
+            }
+            else throw new NotLoggedException("You are not logged to GG network!");
+        }
+        /// <summary>
+        /// Eksportuje podaną listę kontaktów na serwer.
+        /// </summary>
+        /// <param name="contactList">Lista kontaktów do wyeksportowania.</param>
+        public void ExportContactList(ContactList contactList)
+        {
+            if (_isLogged)
+            {
+                Send(Packets.WriteUserListRequest(Container.GG_USERLIST100_PUT, _lastContactListVersion, ContactListType.XML, contactList.ExportToString(ContactListType.XML)));
+            }
+            else throw new NotLoggedException("You are not logged to GG network!");
+        }
+        #endregion
+        #endregion
+
         #region Other
         /// <summary>
         /// Wyślij dane.
@@ -363,9 +419,10 @@ namespace GG4NET
                 case Container.GG_LOGIN80_OK: ProcessLoginOk(e.Data); break;
 
                 case Container.GG_LOGIN80_FAILED: ProcessLoginFailed(e.Data); break;
-
-                case Container.GG_RECV_OWN_MSG:
+                
                 case Container.GG_RECV_MSG80: ProcessReceiveMessage(e.Data); break;
+
+                case Container.GG_RECV_OWN_MSG: ProcessReceiveOwnMessage(e.Data); break;
 
                 case Container.GG_NOTIFY_REPLY80:
                 case Container.GG_STATUS80: ProcessNotifyReply(e.Data); break;
@@ -381,6 +438,10 @@ namespace GG4NET
                 case Container.GG_XML_ACTION: ProcessXmlGGLiveMessage(e.Data); break;
 
                 case Container.GG_XML_EVENT: ProcessXmlSystemMessage(e.Data); break;
+
+                case Container.GG_USERLIST100_REPLY: ProcessUserListReply(e.Data); break;
+
+                case Container.GG_USERLIST100_VERSION: ProcessUserListVersion(e.Data); break;
             }
         }
         private void CloseSocket()
@@ -456,6 +517,23 @@ namespace GG4NET
 
             Send(Packets.WriteReceiveAck(seq));
             OnMessageReceived(new MessageEventArgs(uin, time, plain, html, attrib)); 
+        }
+        /// <summary>
+        /// Przetwórz pakiet o wysłanej wiadomości z innego klienta zalogowanego na nasz numer.
+        /// </summary>
+        /// <param name="data">Dane</param>
+        protected virtual void ProcessReceiveOwnMessage(byte[] data)
+        {
+            uint uin;
+            uint seq;
+            DateTime time;
+            string plain;
+            string html;
+            byte[] attrib;
+            Packets.ReadReceiveMessage(data, out uin, out seq, out time, out plain, out html, out attrib);
+
+            Send(Packets.WriteReceiveAck(seq));
+            OnOwnMessageReceived(new MessageEventArgs(uin, time, plain, html, attrib));
         }
         /// <summary>
         /// Przetwórz pakiet o zmianie statusu osoby z listy kontaktów.
@@ -552,6 +630,32 @@ namespace GG4NET
 
             OnXmlSystemMessageReceived(new XmlMessageEventArgs(msg));
         }
+        /// <summary>
+        /// Przetwórz pakiet w którym została przysłana lista kontaktów.
+        /// </summary>
+        /// <param name="data">Dane</param>
+        protected virtual void ProcessUserListReply(byte[] data)
+        {
+            byte replyType;
+            uint lastVer;
+            ContactListType formatType;
+            string reply;
+            Packets.ReadUserListReply(data, out replyType, out lastVer, out formatType, out reply);
+            if (replyType == Container.GG_USERLIST100_REPLY_LIST)
+            {
+                _lastContactListVersion = lastVer;
+                OnContactListReceived(new ContactListEventArgs(ContactList.ImportFromString(reply, formatType), lastVer));
+            }
+        }
+        /// <summary>
+        /// Przetwórz pakiet w którym została przysłana wersja listy kontaktów.
+        /// </summary>
+        /// <param name="data">Dane.</param>
+        protected virtual void ProcessUserListVersion(byte[] data)
+        {
+            Packets.ReadUserListVersion(data, out _lastContactListVersion);
+            OnContactListReceived(new ContactListEventArgs(null, _lastContactListVersion));
+        }
         #endregion
 
         #region Callback
@@ -603,9 +707,9 @@ namespace GG4NET
                     _receiver.DataReceived(_buffer, 0, bytesReaded);
                     _socket.BeginReceive(_buffer, 0, 8192, 0, new AsyncCallback(OnReceiveCallback), _socket);
                 }
-                else throw new Exception();
+                else throw new SocketException();
             }
-            catch { CloseSocket(); OnDisconnected(); }
+            catch (SocketException) { CloseSocket(); OnDisconnected(); }
         }
         /// <summary>
         /// Metoda zwrotna wysyłania danych.
@@ -669,6 +773,12 @@ namespace GG4NET
         {
             if (MessageReceived != null) MessageReceived(this, e);
         }
+        /// <summary>Wywołuje zdarzenie OwnMessageReceived.</summary>
+        /// <param name="e">Parametry</param>
+        protected virtual void OnOwnMessageReceived(MessageEventArgs e)
+        {
+            if (OwnMessageReceived != null) OwnMessageReceived(this, e);
+        }
         /// <summary>Wywołuje zdarzenie NoMailNotifyReceive.</summary>
         protected virtual void OnNoMailNotifyReceived()
         {
@@ -703,6 +813,12 @@ namespace GG4NET
         protected virtual void OnXmlSystemMessageReceived(XmlMessageEventArgs e)
         {
             if (XmlSystemMessageReceived != null) XmlSystemMessageReceived(this, e);
+        }
+        /// <summary>Wywołuje zdarzenie ContactListReceived.</summary>
+        /// <param name="e">Parametry</param>
+        protected virtual void OnContactListReceived(ContactListEventArgs e)
+        {
+            if (ContactListReceived != null) ContactListReceived(this, e);
         }
         #endregion
 

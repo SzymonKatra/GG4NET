@@ -365,4 +365,47 @@ namespace GG4NET
             _message = message;
         }
     }
+
+    /// <summary>
+    /// Argumenty dla listy kontaktów.
+    /// </summary>
+    public class ContactListEventArgs : EventArgs
+    {
+        private ContactList _contactList;
+        private uint _version;
+
+        /// <summary>
+        /// Lista kontaktów.
+        /// </summary>
+        public ContactList ContactList
+        {
+            get { return _contactList; }
+            set { _contactList = value; }
+        }
+        /// <summary>
+        /// Wersja listy kontaktów
+        /// </summary>
+        public uint Version
+        {
+            get { return _version; }
+            set { _version = value; }
+        }
+
+        /// <summary>
+        /// Stwórz argumenty dla listy kontaktów.
+        /// </summary>
+        public ContactListEventArgs()
+        {
+        }
+        /// <summary>
+        /// Stwórz argumenty dla listy kontaktów.
+        /// </summary>
+        /// <param name="contactList">Lista kontaktów</param>
+        /// <param name="version">Wersja listy kontaktów</param>
+        public ContactListEventArgs(ContactList contactList, uint version = 0)
+        {
+            _contactList = contactList;
+            _version = version;
+        }
+    }
 }

@@ -6,17 +6,11 @@ namespace GG4NET
     /// </summary>
     public enum GGPort
     {
-        /// <summary>
-        /// Brak.
-        /// </summary>
+        /// <summary>Brak.</summary>
         None = 0,
-        /// <summary>
-        /// Port 8074 (domyślny)
-        /// </summary>
+        /// <summary>Port 8074 (domyślny)</summary>
         P8074 = 8074,
-        /// <summary>
-        /// Port 443 (dodatkowy, HTTPS)
-        /// </summary>
+        /// <summary>Port 443</summary>
         P443 = 443,
     }
 

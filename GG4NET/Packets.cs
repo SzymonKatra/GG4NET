@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Net;
+using System.IO;
+using System.IO.Compression;
 
 namespace GG4NET
 {
@@ -180,6 +182,59 @@ namespace GG4NET
                 reader.Close();
             }
         }
+        public static void ReadUserListReply(byte[] data, out byte replyType, out uint listVersion, out ContactListType formatType, out string reply)
+        {
+            using (PacketReader reader = new PacketReader(data))
+            {
+                replyType = reader.ReadByte(); //type
+                listVersion = reader.ReadUInt32(); //list version
+                formatType = Utils.ToPublicContactListFormat(reader.ReadByte()); //format type
+                reader.ReadByte(); //unknown
+                byte[] rep = reader.ReadBytes(data.Length - 7); //reply
+
+                //if (formatType == ContactListType.XML)
+                //{
+                    using (MemoryStream memStream = new MemoryStream(rep))
+                    {
+                        //we must skip first two bytes
+                        //thanks to http://george.chiramattel.com/blog/2007/09/deflatestream-block-length-does-not-match.html
+                        byte[] buff = new byte[2];
+                        memStream.Read(buff, 0, 2);
+
+                        using (DeflateStream dStream = new DeflateStream(memStream, CompressionMode.Decompress))
+                        {
+                            byte[] buffer = new byte[16384];
+                            int len;
+                            PacketWriter output = new PacketWriter();
+                            while ((len = dStream.Read(buffer, 0, Math.Min(rep.Length, buffer.Length))) > 0)
+                            {
+                                output.Write(buffer, 0, len);
+                            }
+                            //reply = Encoding.UTF8.GetString(output.Data);
+                            reply = (formatType == ContactListType.XML ? Encoding.UTF8 : Encoding.GetEncoding("windows-1250")).GetString(output.Data);
+                            output.Close();
+
+                            dStream.Close();
+                        }
+                    }
+                //}
+                //else reply = Encoding.GetEncoding("windows-1250").GetString(rep);
+
+
+                //reply = (formatType == ContactListType.XML ? Encoding.UTF8 : Encoding.GetEncoding("windows-1250")).GetString(rep);
+
+                reader.Close();
+            }
+        }
+        public static void ReadUserListVersion(byte[] data, out uint version)
+        {
+            using (PacketReader reader = new PacketReader(data))
+            {
+                version = reader.ReadUInt32(); //version
+
+                reader.Close();
+            }
+        }
 
         public static byte[] WriteLogin(uint uin, string password, uint passwordSeed, Status status, string description)
         {
@@ -297,6 +352,15 @@ namespace GG4NET
         {
             return BuildHeader(Container.GG_PING, null);
         }
+        public static byte[] WriteDisconnectMultiloginSession(ulong connectionId)
+        {
+            using (PacketWriter writer = new PacketWriter())
+            {
+                writer.Write(connectionId);
+
+                return BuildHeader(Container.GG_MULTILOGON_DISCONNECT, writer.Data);
+            }
+        }
         public static byte[] WriteTypingNotify(uint uin, TypingNotifyType type, ushort length = 0)
         {
             using (PacketWriter writer = new PacketWriter())
@@ -399,6 +463,42 @@ namespace GG4NET
                 }
 
                 return BuildHeader(Container.GG_PUBDIR50_REQUEST, writer.Data);
+            }
+        }
+        public static byte[] WriteUserListRequest(byte requestType, uint listVersion, ContactListType formatType, string request)
+        {
+            using (PacketWriter writer = new PacketWriter())
+            {
+                writer.Write(requestType); //type
+                writer.Write(listVersion); //list version
+                writer.Write(Utils.ToInternalContactListFormat(formatType)); //format type
+                writer.Write((byte)0x01); // unknown
+                if (request != null && request != string.Empty) //request
+                {
+                    if (formatType == ContactListType.XML)
+                    {
+                        byte[] utfReq = Encoding.UTF8.GetBytes(request);
+                        using (MemoryStream memStream = new MemoryStream())
+                        {
+                            //2 first bytes
+                            byte[] headerBuffer = new byte[] { 120, 218 };
+                            memStream.Write(headerBuffer, 0, headerBuffer.Length);
+
+                            using (DeflateStream dStream = new DeflateStream(memStream, CompressionMode.Compress))
+                            {
+                                dStream.Write(utfReq, 0, utfReq.Length);
+                            }
+                            writer.Write(memStream.ToArray());
+                            memStream.Close();
+                        }
+                    }
+                    else
+                    {
+                        writer.Write(Encoding.GetEncoding("windows-1250").GetBytes(request));
+                    }
+                }
+
+                return BuildHeader(Container.GG_USERLIST100_REQUEST, writer.Data);
             }
         }
 

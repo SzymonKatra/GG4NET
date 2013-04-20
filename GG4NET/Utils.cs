@@ -113,5 +113,24 @@ namespace GG4NET
                 default: return Gender.None;
             }
         }
+
+        public static byte ToInternalContactListFormat(ContactListType type)
+        {
+            switch (type)
+            {
+                case ContactListType.CSV: return Container.GG_USERLIST100_FORMAT_TYPE_GG70;
+                case ContactListType.XML: return Container.GG_USERLIST100_FORMAT_TYPE_GG100;
+                default: return Container.GG_USERLIST100_FORMAT_TYPE_NONE;
+            }
+        }
+        public static ContactListType ToPublicContactListFormat(byte type)
+        {
+            switch (type)
+            {
+                case Container.GG_USERLIST100_FORMAT_TYPE_GG70: return ContactListType.CSV;
+                case Container.GG_USERLIST100_FORMAT_TYPE_GG100: return ContactListType.XML;
+                default: return ContactListType.None;
+            }
+        }
     }
 }

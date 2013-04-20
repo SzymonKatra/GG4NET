@@ -191,6 +191,80 @@ namespace GG4NET
             {
                 #region CSV
                 case ContactListType.CSV:
+                    string[] lines = content.Split(new string[] { "\r\n" }, StringSplitOptions.None);
+                    string[] header = lines[0].Split(new string[] { ",;" }, StringSplitOptions.None);
+
+                    #region ReadGroups
+                    int groupId = 0;
+                    foreach (string hG in header)
+                    {
+                        try
+                        {
+                            if (hG == "GG70ExportString" || hG == string.Empty) continue;
+                            cList.Groups.Add(new Group() { Id = groupId.ToString(), Name = hG, IsExpanded = true, IsRemoveable = true });
+                            ++groupId;
+                        }
+                        catch { }
+                    }
+                    #endregion
+
+                    lines[0] = "";
+
+                    #region ReadContacts
+                    foreach (string line in lines)
+                    {
+                        try
+                        {
+                            if (line.StartsWith("i;;;;;;"))
+                            {
+                                uint uin = uint.Parse(line.Remove(0, 7));
+                                for (int i = 0; i < cList.Contacts.Count; i++)
+                                {
+                                    if (cList.Contacts[i].Uin == uin)
+                                    {
+                                        Contact c = cList.Contacts[i];
+                                        c.Type = ContactType.Blocked;
+                                        cList.Contacts[i] = c;
+                                        break;
+                                    }
+                                }
+                                continue;
+                            }
+                            if (line == string.Empty) continue;
+                            string[] conSplit = line.Split(';');
+                            int contactGroups = conSplit.Length - 13;
+
+                            Contact con = new Contact();
+                            con.FirstName = conSplit[0];
+                            con.LastName = conSplit[1];
+                            con.NickName = conSplit[2];
+                            con.ShowName = conSplit[3];
+                            con.MobilePhone = conSplit[4];
+
+                            Group[] grps = new Group[contactGroups];
+                            for (int i = 0; i < grps.Length; i++)
+                            {
+                                foreach (Group g in cList.Groups)
+                                {
+                                    if (g.Id == conSplit[5 + i])
+                                    {
+                                        grps[i] = g;
+                                        break;
+                                    }
+                                }
+                            }
+                            con.Groups = grps;
+
+                            con.Uin = uint.Parse(conSplit[5 + contactGroups]);
+                            con.Email = conSplit[6 + contactGroups];
+                            con.HomePhone = conSplit[12 + contactGroups];
+                            con.Type = ContactType.Normal;
+
+                            cList.Contacts.Add(con);
+                        }
+                        catch { }
+                    }
+                    #endregion
                     break;
                 #endregion
                 #region XML
@@ -238,7 +312,11 @@ namespace GG4NET
                                            {
                                                foreach (string gGuid in grps)
                                                {
-                                                   if (globalGroup.Id == gGuid) contactGroups.Add(globalGroup); // find matching groups
+                                                   if (globalGroup.Id == gGuid) // find matching groups
+                                                   {
+                                                       contactGroups.Add(globalGroup);
+                                                       break;
+                                                   }
                                                }
                                            }
 
@@ -325,7 +403,68 @@ namespace GG4NET
             {
                 #region CSV
                 case ContactListType.CSV:
-                    return string.Empty;
+                    StringBuilder builder = new StringBuilder();
+                    builder.Append("GG70ExportString,;"); //header
+
+                    #region WriteGroups
+                    foreach (Group g in contactList.Groups)
+                    {
+                        builder.Append(g.Name + ",;");
+                    }
+                    #endregion
+                    builder.AppendLine();
+                    #region WriteContacts
+                    foreach (Contact c in contactList.Contacts)
+                    {
+                        builder.Append(c.FirstName); // first name
+                        builder.Append(';');
+                        builder.Append(c.LastName); // last name
+                        builder.Append(';');
+                        builder.Append(c.NickName); //nick name
+                        builder.Append(';');
+                        builder.Append(c.ShowName); //show name
+                        builder.Append(';');
+                        builder.Append(c.MobilePhone); //mobile phone number
+                        builder.Append(';');
+                        foreach (Group g in c.Groups) //groups
+                        {
+                            for (int i = 0; i < contactList.Groups.Count; i++)
+                            {
+                                if (g.Id == contactList.Groups[i].Id)
+                                {
+                                    builder.Append(i.ToString());
+                                    builder.Append(';');
+                                    break;
+                                }
+                            }
+                        }
+                        builder.Append(c.Uin.ToString()); //gg num
+                        builder.Append(';');
+                        builder.Append(c.Email); //email
+                        builder.Append(';');
+                        builder.Append(';'); //message sound
+                        builder.Append(';'); //path to message sound
+                        builder.Append(';'); //status sound
+                        builder.Append(';'); //path to status sound
+                        builder.Append(';'); //status change in only friends mode
+                        builder.Append(c.HomePhone); //home phone
+                        // no ; here
+                        builder.AppendLine(); //end contact
+                    }
+                    #endregion
+                    #region WriteIgnore
+                    foreach (Contact c in contactList.Contacts)
+                    {
+                        if (c.Type == ContactType.Blocked)
+                        {
+                            builder.Append("i;;;;;;");
+                            builder.Append(c.Uin.ToString());
+                            builder.AppendLine();
+                        }
+                    }
+                    #endregion
+
+                    return builder.ToString();
                 #endregion
                 #region XML
                 case ContactListType.XML:
@@ -362,13 +501,19 @@ namespace GG4NET
                         if (contactList.Contacts[i].BirthDate != string.Empty) contacts[i].Add(new XElement("Birth", contactList.Contacts[i].BirthDate));
                         if (contactList.Contacts[i].City != string.Empty) contacts[i].Add(new XElement("City", contactList.Contacts[i].City));
 
-                        XElement[] grps = new XElement[contactList.Contacts[i].Groups.Length];
-                        for (int j = 0; j < grps.Length; j++) grps[j] = new XElement("GroupId", contactList.Contacts[i].Groups[j].Id);
-                        if (grps.Length > 0) contacts[i].Add(new XElement("Groups", grps));
+                        if (contactList.Contacts[i].Groups != null && contactList.Contacts[i].Groups.Length > 0)
+                        {
+                            XElement[] grps = new XElement[contactList.Contacts[i].Groups.Length];
+                            for (int j = 0; j < grps.Length; j++) grps[j] = new XElement("GroupId", contactList.Contacts[i].Groups[j].Id);
+                            if (grps.Length > 0) contacts[i].Add(new XElement("Groups", grps));
+                        }
 
-                        XElement[] avUrls = new XElement[contactList.Contacts[i].Avatars.Length];
-                        for (int j = 0; j < avUrls.Length; j++) avUrls[j] = new XElement("URL", contactList.Contacts[i].Avatars[j]);
-                        if (avUrls.Length > 0) contacts[i].Add(new XElement("Avatars", avUrls));
+                        if (contactList.Contacts[i].Avatars != null && contactList.Contacts[i].Avatars.Length > 0)
+                        {
+                            XElement[] avUrls = new XElement[contactList.Contacts[i].Avatars.Length];
+                            for (int j = 0; j < avUrls.Length; j++) avUrls[j] = new XElement("URL", contactList.Contacts[i].Avatars[j]);
+                            if (avUrls.Length > 0) contacts[i].Add(new XElement("Avatars", avUrls));
+                        }
 
                         if (contactList.Contacts[i].Type == ContactType.Blocked)
                             contacts[i].Add(new XElement("FlagIgnored", "true"));

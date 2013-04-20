@@ -21,6 +21,7 @@ namespace GG4NET
 
         public const uint GG_RECV_OWN_MSG = 0x005A;
         public const uint GG_MULTILOGON_INFO = 0x005B;
+        public const uint GG_MULTILOGON_DISCONNECT = 0x0062;
 
         public const uint GG_NEED_EMAIL = 0x0014;
 
@@ -39,6 +40,9 @@ namespace GG4NET
 
         public const uint GG_XML_ACTION = 0x002c;
         public const uint GG_XML_EVENT = 0x0027;
+        public const uint GG_USERLIST100_REQUEST = 0x0040;
+        public const uint GG_USERLIST100_REPLY = 0x0041;
+        public const uint GG_USERLIST100_VERSION = 0x005c;
 
 
         public const byte GG_LOGIN_HASH_GG32 = 0x01;
@@ -100,5 +104,17 @@ namespace GG4NET
 
         public const uint GG_PUBDIR50_ACTIVE_TRUE = 1;
         public const uint GG_PUBDIR50_ACTIVE_FALSE = 0;
+
+        public const byte GG_USERLIST100_PUT = 0x00;
+        public const byte GG_USERLIST100_GET = 0x02;
+
+        public const byte GG_USERLIST100_FORMAT_TYPE_NONE = 0x00;
+        public const byte GG_USERLIST100_FORMAT_TYPE_GG70 = 0x01;
+        public const byte GG_USERLIST100_FORMAT_TYPE_GG100 = 0x02;
+
+        public const byte GG_USERLIST100_REPLY_LIST = 0x00;
+        public const byte GG_USERLIST100_REPLY_ACK = 0x10;
+        public const byte GG_USERLIST100_REPLY_REJECT = 0x12;
+        public const byte GG_USERLIST100_REPLY_REJECT_V2 = 0x13;
     }
 }
