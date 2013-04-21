@@ -13,6 +13,7 @@ namespace GG4NET
         private string _message;
         private string _htmlMessage;
         private byte[] _attributes;
+        private uint[] _conferenceParticipants;
 
         /// <summary>
         /// Nadawca wiadomości.
@@ -79,6 +80,15 @@ namespace GG4NET
             get { return _attributes; }
             set { _attributes = value; }
         }
+        /// <summary>
+        /// Członkowie konferencji.
+        /// Jeżeli ta wiadomość nie jest wiadomością konferencyjną, zawiera tylko numer nadawcy.
+        /// </summary>
+        public uint[] ConferenceParticipants
+        {
+            get { return _conferenceParticipants; }
+            set { _conferenceParticipants = value; }
+        }
         #endregion
 
         #region Constructors
@@ -96,7 +106,7 @@ namespace GG4NET
         /// <param name="time">Czas nadania</param>
         /// <param name="message">Wiadomość</param>
         public MessageEventArgs(uint uin, DateTime time, string message)
-            : this(uin, time, message, message, null)
+            : this(uin, time, message, message, null, null)
         {
         }
         /// <summary>
@@ -107,7 +117,7 @@ namespace GG4NET
         /// <param name="message">Wiadomość</param>
         /// <param name="htmlMessage">Wiadomość HTML</param>
         public MessageEventArgs(uint uin, DateTime time, string message, string htmlMessage)
-            : this(uin, time, message, htmlMessage, null)
+            : this(uin, time, message, htmlMessage, null, null)
         {
         }
         /// <summary>
@@ -119,12 +129,26 @@ namespace GG4NET
         /// <param name="htmlMessage">Wiadomość HTML</param>
         /// <param name="attributes">Atrybuty wiadomości</param>
         public MessageEventArgs(uint uin, DateTime time, string message, string htmlMessage, byte[] attributes)
+            : this(uin, time, message, htmlMessage, attributes, null)
+        {
+        }
+        /// <summary>
+        /// Stwórz argumenty dla wiadomości.
+        /// </summary>
+        /// <param name="uin">Nadawca</param>
+        /// <param name="time">Czas nadania</param>
+        /// <param name="message">Wiadomość</param>
+        /// <param name="htmlMessage">Wiadomość HTML</param>
+        /// <param name="attributes">Atrybuty wiadomości</param>
+        /// <param name="conferenceParticipants">Członkowie konferencji</param>
+        public MessageEventArgs(uint uin, DateTime time, string message, string htmlMessage, byte[] attributes, uint[] conferenceParticipants)
         {
             _uin = uin;
             _time = time;
             _message = message;
             _htmlMessage = htmlMessage;
             _attributes = attributes;
+            _conferenceParticipants = (conferenceParticipants == null ? new uint[] { uin } : conferenceParticipants);
         }
         #endregion
     }

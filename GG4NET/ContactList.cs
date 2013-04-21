@@ -376,7 +376,7 @@ namespace GG4NET
         /// <param name="type">Format fo którego wyeksportować</param>
         public static void ExportToFile(ContactList contactList, string fileName, ContactListType type)
         {
-            using (StreamWriter writer = new StreamWriter(new FileStream(fileName, FileMode.CreateNew), (type == ContactListType.XML ? Encoding.UTF8 : Encoding.GetEncoding("windows-1250"))))
+            using (StreamWriter writer = new StreamWriter(new FileStream(fileName, FileMode.Create), (type == ContactListType.XML ? Encoding.UTF8 : Encoding.GetEncoding("windows-1250"))))
             {
                 writer.Write(ExportToString(contactList, type));
                 writer.Close();
@@ -486,7 +486,7 @@ namespace GG4NET
                     for (int i = 0; i < contacts.Length; i++)
                     {
                         contacts[i] = new XElement("Contact",
-                            new XElement("Id", contactList.Contacts[i].Id),
+                            new XElement("Guid", contactList.Contacts[i].Id),
                             new XElement("GGNumber", contactList.Contacts[i].Uin.ToString()));
 
                         string nick = (contactList.Contacts[i].ShowName != string.Empty ? contactList.Contacts[i].ShowName : contactList.Contacts[i].NickName);
@@ -514,6 +514,10 @@ namespace GG4NET
                             for (int j = 0; j < avUrls.Length; j++) avUrls[j] = new XElement("URL", contactList.Contacts[i].Avatars[j]);
                             if (avUrls.Length > 0) contacts[i].Add(new XElement("Avatars", avUrls));
                         }
+                        else
+                        {
+                            contacts[i].Add(new XElement("Avatars", new XElement("URL", string.Empty)));
+                        }
 
                         if (contactList.Contacts[i].Type == ContactType.Blocked)
                             contacts[i].Add(new XElement("FlagIgnored", "true"));
@@ -524,12 +528,15 @@ namespace GG4NET
                     }
                 #endregion
                     xDoc = new XDocument(
-                        new XElement("ContactBook",
-                            new XElement("Groups", groups),
-                            new XElement("Contacts", contacts)
-                            )
-                            );
-                    return xDoc.ToString();
+                        new XElement("ContactBook", new XElement("Groups", groups), new XElement("Contacts", contacts)));
+
+                    //remove white chars
+                    string xDocStr = xDoc.ToString();
+                    xDocStr = xDocStr.Replace("\n", "");
+                    xDocStr = xDocStr.Replace("\r", "");
+                    xDocStr = xDocStr.Replace("\t", "");
+                    xDocStr = xDocStr.Replace(" ", "");
+                    return xDocStr;
                 #endregion
                 default: return string.Empty;
             }

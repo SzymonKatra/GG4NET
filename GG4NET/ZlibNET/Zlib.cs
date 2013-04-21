@@ -1,28 +1,3 @@
-Copyright (c) 2013 Szymon Katra
-Ten produkt jest udostêpniony 'jak-jest', bez ¿adnych gwarancji, wyraŸnych lub dorozumianuch. W ¿adnym przypadku autorzy nie bêd¹ ponosiæ odpowiedzialnoœci za jakiekolwiek szkody wynikaj¹ce z korzystania z tego oprogramowania.
-
-Udziela siê zgody ka¿demu do korzystania z tego oprogramowania do jakichkolwiek celów, w tym komercyjnych, zmiany go i rozpowszechniania go za darmo, z zastrze¿eniem nastêpuj¹cych ograniczeñ:
-
-1. Pochodzenie tego oprogramowania nie mo¿e byæ nieprawdziwe, nie wolno twierdziæ, ¿e jest siê autorem oryginalnego oprogramowania. W przypadku korzystania z tego oprogramowania w produkcie, potwierdzenie w dokumentacji produktu bêdzie mile widziane, ale nie jest wymagane.
-
-2. Zmienione wersje Ÿród³owe musz¹ byæ wyraŸnie oznaczone jako takie, i nie mo¿e byæ podawane jako oryginalne oprogramowanie.
-
-3. Informacja ta nie mo¿e byæ usuniêta lub zmieniona we wszelkich formach dystrybucji Ÿród³owej.
-
-
-Copyright (c) 2013 Szymon Katra
-This software is provided 'as-is', without any express or implied warranty. In no event will the authors be held liable for any damages arising from the use of this software.
-
-Permission is granted to anyone to use this software for any purpose, including commercial applications, and to alter it and redistribute it freely, subject to the following restrictions:
-
-1. The origin of this software must not be misrepresented; you must not claim that you wrote the original software. If you use this software in a product, an acknowledgment in the product documentation would be appreciated but is not required.
-
-2. Altered source versions must be plainly marked as such, and must not be misrepresented as being the original software.
-
-3. This notice may not be removed or altered from any source distribution.
-
-
-Zlib.NET license:
 // Copyright (c) 2006, ComponentAce
 // http://www.componentace.com
 // All rights reserved.
@@ -66,3 +41,43 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 * Jean-loup Gailly(jloup@gzip.org) and Mark Adler(madler@alumni.caltech.edu)
 * and contributors of zlib.
 */
+using System;
+namespace GG4NET
+{
+	
+	sealed internal class zlibConst
+	{
+		private const System.String version_Renamed_Field = "1.0.2";
+		public static System.String version()
+		{
+			return version_Renamed_Field;
+		}
+		
+		// compression levels
+		public const int Z_NO_COMPRESSION = 0;
+		public const int Z_BEST_SPEED = 1;
+		public const int Z_BEST_COMPRESSION = 9;
+		public const int Z_DEFAULT_COMPRESSION = (- 1);
+		
+		// compression strategy
+		public const int Z_FILTERED = 1;
+		public const int Z_HUFFMAN_ONLY = 2;
+		public const int Z_DEFAULT_STRATEGY = 0;
+		
+		public const int Z_NO_FLUSH = 0;
+		public const int Z_PARTIAL_FLUSH = 1;
+		public const int Z_SYNC_FLUSH = 2;
+		public const int Z_FULL_FLUSH = 3;
+		public const int Z_FINISH = 4;
+		
+		public const int Z_OK = 0;
+		public const int Z_STREAM_END = 1;
+		public const int Z_NEED_DICT = 2;
+		public const int Z_ERRNO = - 1;
+		public const int Z_STREAM_ERROR = - 2;
+		public const int Z_DATA_ERROR = - 3;
+		public const int Z_MEM_ERROR = - 4;
+		public const int Z_BUF_ERROR = - 5;
+		public const int Z_VERSION_ERROR = - 6;
+	}
+}

@@ -24,6 +24,7 @@ namespace GG4NET
         private byte[] _buffer = null;
         private System.Timers.Timer _pingTimer;
         private uint _lastContactListVersion = 0;
+        private SynchronizationContext _syncContext = null;
         private bool _disposed = false;
 
         /// <summary>
@@ -68,6 +69,14 @@ namespace GG4NET
         /// Czy zalogowany?
         /// </summary>
         public bool IsLogged { get { return _isLogged; } }
+        /// <summary>
+        /// Kontekst z którym synchronizować zdarzenia.
+        /// </summary>
+        public SynchronizationContext SyncContext
+        {
+            get { return _syncContext; }
+            set { _syncContext = value; }
+        }
         #endregion
 
         #region Events
@@ -204,6 +213,53 @@ namespace GG4NET
             if (_isLogged)
             {
                 Send(Packets.WriteSendMessage(recipient, message, htmlMessage, attributes));
+            }
+            else throw new NotLoggedException("You are not logged to GG network!");
+        }
+
+        /// <summary>
+        /// Wyślij wiadomość konferencyjną.
+        /// </summary>
+        /// <param name="recipients">Odbiorcy</param>
+        /// <param name="message">Wiadomość</param>
+        public void SendMessage(uint[] recipients, string message)
+        {
+            SendMessage(recipients, message, string.Format("<span style=\"color:#000000; font-family:'MS Shell Dlg 2'; font-size:9pt; \">{0}</span>\0", message));
+        }
+        /// <summary>
+        /// Wyślij wiadomość konferencyjną.
+        /// </summary>
+        /// <param name="recipients">Odbiorcy</param>
+        /// <param name="message">Wiadomość</param>
+        /// <param name="htmlMessage">Wiadomość w formacie HTML</param>
+        public void SendMessage(uint[] recipients, string message, string htmlMessage)
+        {
+            if (_isLogged)
+            {
+                byte[] baseConfAttrib = new byte[5];
+                baseConfAttrib[0] = 0x01; //conference flag
+                byte[] lenBytes = BitConverter.GetBytes((uint)recipients.Length - 1);
+                Buffer.BlockCopy(lenBytes, 0, baseConfAttrib, 1, 4); //write number of recipients
+
+                foreach (uint uin in recipients)
+                {
+                    using (PacketWriter writer = new PacketWriter())
+                    {
+                        writer.Write(baseConfAttrib);
+
+                        foreach (uint recNumber in recipients)
+                        {
+                            if (recNumber == uin) continue;
+                            writer.Write(recNumber);
+                        }
+
+                        //writer.Write((byte)0x02);
+
+                        SendMessage(uin, message, htmlMessage, writer.Data);
+
+                        writer.Close();
+                    }
+                }
             }
             else throw new NotLoggedException("You are not logged to GG network!");
         }
@@ -384,6 +440,17 @@ namespace GG4NET
             }
             else throw new NotLoggedException("You are not logged to GG network!");
         }
+        /// <summary>
+        /// Usuwa listę kontaktów z serwera.
+        /// </summary>
+        public void DeleteContactList()
+        {
+            if (_isLogged)
+            {
+                Send(Packets.WriteUserListRequest(Container.GG_USERLIST100_PUT, _lastContactListVersion, ContactListType.XML, " "));
+            }
+            else throw new NotLoggedException("You are not logged to GG network!");
+        }
         #endregion
         #endregion
 
@@ -489,6 +556,10 @@ namespace GG4NET
                 i += toSend;
             }
 
+            _pingTimer = new System.Timers.Timer(50000); //50 seconds
+            _pingTimer.Elapsed += (s, e) => { Send(Packets.WritePing()); };
+            _pingTimer.Start();
+
             _isLogged = true;
             OnLogged();
         }
@@ -515,8 +586,28 @@ namespace GG4NET
             byte[] attrib;
             Packets.ReadReceiveMessage(data, out uin, out seq, out time, out plain, out html, out attrib);
 
+            uint[] confMembers = null;
+            if (attrib.Length >= 2)
+            {
+                if (attrib[0] == 0 && attrib[1] == 1)//conference message
+                {
+                    try
+                    {
+                        using (PacketReader reader = new PacketReader(attrib))
+                        {
+                            reader.ReadBytes(2); //conference flag
+                            uint count = reader.ReadUInt32(); //count of members
+                            confMembers = new uint[count];
+                            for (uint i = 0; i < count; i++) confMembers[i] = reader.ReadUInt32(); //read uin's
+                            reader.Close();
+                        }
+                    }
+                    catch { }
+                }
+            }
+
             Send(Packets.WriteReceiveAck(seq));
-            OnMessageReceived(new MessageEventArgs(uin, time, plain, html, attrib)); 
+            OnMessageReceived(new MessageEventArgs(uin, time, plain, html, attrib, confMembers)); 
         }
         /// <summary>
         /// Przetwórz pakiet o wysłanej wiadomości z innego klienta zalogowanego na nasz numer.
@@ -646,6 +737,10 @@ namespace GG4NET
                 _lastContactListVersion = lastVer;
                 OnContactListReceived(new ContactListEventArgs(ContactList.ImportFromString(reply, formatType), lastVer));
             }
+            else if (replyType == 0x01)
+            {
+                _lastContactListVersion = lastVer;
+            }
         }
         /// <summary>
         /// Przetwórz pakiet w którym została przysłana wersja listy kontaktów.
@@ -673,9 +768,6 @@ namespace GG4NET
                 _receiver = new PacketReceiver();
                 _receiver.PacketArrived += _receiver_PacketArrived;
                 _socket.BeginReceive(_buffer, 0, 8192, 0, new AsyncCallback(OnReceiveCallback), _socket);
-                _pingTimer = new System.Timers.Timer(1000 * 60 * 4); //4 minutes
-                _pingTimer.Elapsed += (s, e) => { Send(Packets.WritePing()); };
-                _pingTimer.Start();
             }
             catch { OnConnectFailed(); CloseSocket(); }
         }
@@ -729,96 +821,130 @@ namespace GG4NET
         /// <summary>Wywołuje zdarzenie ConnectFailed.</summary>
         protected virtual void OnConnectFailed()
         {
-            if (ConnectFailed != null) ConnectFailed(this, EventArgs.Empty);
+            RaiseEvent(ConnectFailed);
         }
         /// <summary>Wywołuje zdarzenie LoginFailed.</summary>
         protected virtual void OnLoginFailed()
         {
-            if (LoginFailed != null) LoginFailed(this, EventArgs.Empty);
+            RaiseEvent(LoginFailed);
         }
         /// <summary>Wywołuje zdarzenie ServerObtainingFailed.</summary>
         protected virtual void OnServerObtainingFailed()
         {
-            if (ServerObtainingFailed != null) ServerObtainingFailed(this, EventArgs.Empty);
+            RaiseEvent(ServerObtainingFailed);
         }
         /// <summary>Wywołuje zdarzenie Connected.</summary>
         protected virtual void OnConnected()
         {
-            if (Connected != null) Connected(this, EventArgs.Empty);
+            RaiseEvent(Connected);
         }
         /// <summary>Wywołuje zdarzenie Disconnected.</summary>
         protected virtual void OnDisconnected()
         {
-            if (Disconnected != null) Disconnected(this, EventArgs.Empty);
+            RaiseEvent(Disconnected);
         }
         /// <summary>Wywołuje zdarzenie Logged.</summary>
         protected virtual void OnLogged()
         {
-            if (Logged != null) Logged(this, EventArgs.Empty);
+            RaiseEvent(Logged);
         }
         /// <summary>Wywołuje zdarzenie ServerObtained.</summary>
         protected virtual void OnServerObtained()
         {
-            if (ServerObtained != null) ServerObtained(this, EventArgs.Empty);
+            RaiseEvent(ServerObtained);
         }
         /// <summary>Wywołuje zdarzenie StatusChanged.</summary>
         /// <param name="e">Parametry</param>
         protected virtual void OnStatusChanged(StatusEventArgs e)
         {
-            if (StatusChanged != null) StatusChanged(this, e);
+            RaiseEvent(StatusChanged, e);
         }
         /// <summary>Wywołuje zdarzenie MessageReceived.</summary>
         /// <param name="e">Parametry</param>
         protected virtual void OnMessageReceived(MessageEventArgs e)
         {
-            if (MessageReceived != null) MessageReceived(this, e);
+            RaiseEvent(MessageReceived, e);
         }
         /// <summary>Wywołuje zdarzenie OwnMessageReceived.</summary>
         /// <param name="e">Parametry</param>
         protected virtual void OnOwnMessageReceived(MessageEventArgs e)
         {
-            if (OwnMessageReceived != null) OwnMessageReceived(this, e);
+            RaiseEvent(OwnMessageReceived, e);
         }
         /// <summary>Wywołuje zdarzenie NoMailNotifyReceive.</summary>
         protected virtual void OnNoMailNotifyReceived()
         {
-            if (NoMailNotifyReceived != null) NoMailNotifyReceived(this, EventArgs.Empty);
+            RaiseEvent(NoMailNotifyReceived);
         }
         /// <summary>Wywołuje zdarzenie MultilogonNotifyReceived.</summary>
         /// <param name="e">Parametry</param>
         protected virtual void OnMultiloginNotifyReceived(MultiloginEventArgs e)
         {
-            if (MultiloginNotifyReceived != null) MultiloginNotifyReceived(this, e);
+            RaiseEvent(MultiloginNotifyReceived, e);
         }
         /// <summary>Wywołuje zdarzenie TypingNotifyReceived.</summary>
         /// <param name="e">Parametry</param>
         protected virtual void OnTypingNotifyReceived(TypingNotifyEventArgs e)
         {
-            if (TypingNotifyReceived != null) TypingNotifyReceived(this, e);
+            RaiseEvent(TypingNotifyReceived, e);
         }
         /// <summary>Wywołuje zdarzenie PublicDirectoryReplyReceived.</summary>
         /// <param name="e">Parametry</param>
         protected virtual void OnPublicDirectoryReplyReceived(PublicDirectoryReplyEventArgs e)
         {
-            if (PublicDirectoryReplyReceived != null) PublicDirectoryReplyReceived(this, e);
+            RaiseEvent(PublicDirectoryReplyReceived, e);
         }
         /// <summary>Wywołuje zdarzenie XmlGGLiveMessageReceived.</summary>
         /// <param name="e">Parametry</param>
         protected virtual void OnXmlGGLiveMessageReceived(XmlMessageEventArgs e)
         {
-            if (XmlGGLiveMessageReceived != null) XmlGGLiveMessageReceived(this, e);
+            RaiseEvent(XmlGGLiveMessageReceived, e);
         }
         /// <summary>Wywołuje zdarzenie XmlSystemMessageReceived.</summary>
         /// <param name="e">Parametry</param>
         protected virtual void OnXmlSystemMessageReceived(XmlMessageEventArgs e)
         {
-            if (XmlSystemMessageReceived != null) XmlSystemMessageReceived(this, e);
+            RaiseEvent(XmlSystemMessageReceived, e);
         }
         /// <summary>Wywołuje zdarzenie ContactListReceived.</summary>
         /// <param name="e">Parametry</param>
         protected virtual void OnContactListReceived(ContactListEventArgs e)
         {
-            if (ContactListReceived != null) ContactListReceived(this, e);
+            RaiseEvent(ContactListReceived, e);
+        }
+
+        /// <summary>
+        /// Synchronizuje zdarzenia wywoływane na różnych wątkach.
+        /// </summary>
+        /// <param name="handler">Zdarzenie</param>
+        protected void RaiseEvent(EventHandler handler)
+        {
+            RaiseEvent(handler, EventArgs.Empty);
+        }
+        /// <summary>
+        /// Synchronizuje zdarzenia wywoływane na różnych wątkach.
+        /// </summary>
+        /// <param name="handler">Zdarzenie</param>
+        /// <param name="e">Argumenty</param>
+        protected void RaiseEvent(EventHandler handler, EventArgs e)
+        {
+            if (handler == null) return;
+            if (_syncContext != null)
+                _syncContext.Post(new SendOrPostCallback((state) => { handler(this, e); }), null);
+            else handler(this, e);
+        }
+        /// <summary>
+        /// Synchronizuje zdarzenia wywoływane na różnych wątkach.
+        /// </summary>
+        /// <typeparam name="T">Typ argumentów</typeparam>
+        /// <param name="handler">Zdarzenie</param>
+        /// <param name="e">Argumenty</param>
+        protected void RaiseEvent<T>(EventHandler<T> handler, T e) where T : EventArgs
+        {
+            if (handler == null) return;
+            if (_syncContext != null)
+                _syncContext.Post(new SendOrPostCallback((state) => { handler(this, e); }), null);
+            else handler(this, e);
         }
         #endregion
 

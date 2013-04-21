@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Text;
 using System.Net;
 using System.IO;
-using System.IO.Compression;
 
 namespace GG4NET
 {
@@ -23,9 +22,9 @@ namespace GG4NET
             using (PacketReader reader = new PacketReader(data))
             {
                 uin = reader.ReadUInt32(); //gg num
-                seq = reader.ReadUInt32(); //sequence number = time from 1.1.1970
+                seq = reader.ReadUInt32(); //sequence number
                 time = new DateTime(1970, 1, 1);
-                time.AddSeconds(reader.ReadUInt32());
+                time.AddSeconds(reader.ReadUInt32()); //time
                 reader.ReadUInt32(); // message class
                 uint plain_offset = reader.ReadUInt32(); //plain offset
                 uint attrib_offset = reader.ReadUInt32(); //attributes offset
@@ -192,33 +191,23 @@ namespace GG4NET
                 reader.ReadByte(); //unknown
                 byte[] rep = reader.ReadBytes(data.Length - 7); //reply
 
-                //if (formatType == ContactListType.XML)
-                //{
-                    using (MemoryStream memStream = new MemoryStream(rep))
+                using (MemoryStream memStream = new MemoryStream(rep))
+                {
+                    using (ZInputStream inflator = new ZInputStream(memStream))
                     {
-                        //we must skip first two bytes
-                        //thanks to http://george.chiramattel.com/blog/2007/09/deflatestream-block-length-does-not-match.html
-                        byte[] buff = new byte[2];
-                        memStream.Read(buff, 0, 2);
-
-                        using (DeflateStream dStream = new DeflateStream(memStream, CompressionMode.Decompress))
+                        byte[] buffer = new byte[16384];
+                        int len;
+                        PacketWriter output = new PacketWriter();
+                        while ((len = inflator.read(buffer, 0, Math.Min(rep.Length, buffer.Length))) > 0)
                         {
-                            byte[] buffer = new byte[16384];
-                            int len;
-                            PacketWriter output = new PacketWriter();
-                            while ((len = dStream.Read(buffer, 0, Math.Min(rep.Length, buffer.Length))) > 0)
-                            {
-                                output.Write(buffer, 0, len);
-                            }
-                            //reply = Encoding.UTF8.GetString(output.Data);
-                            reply = (formatType == ContactListType.XML ? Encoding.UTF8 : Encoding.GetEncoding("windows-1250")).GetString(output.Data);
-                            output.Close();
-
-                            dStream.Close();
+                            output.Write(buffer, 0, len);
                         }
+                        reply = (formatType == ContactListType.XML ? Encoding.UTF8 : Encoding.GetEncoding("windows-1250")).GetString(output.Data);
+                        output.Close();
+
+                        inflator.Close();
                     }
-                //}
-                //else reply = Encoding.GetEncoding("windows-1250").GetString(rep);
+                }
 
 
                 //reply = (formatType == ContactListType.XML ? Encoding.UTF8 : Encoding.GetEncoding("windows-1250")).GetString(rep);
@@ -331,7 +320,7 @@ namespace GG4NET
                 byte[] html_msg = Encoding.UTF8.GetBytes(string.Format("{0}\0", htmlMessage));
                 byte[] plain_msg = Encoding.GetEncoding("windows-1250").GetBytes(string.Format("{0}\0", plainMessage));
                 writer.Write((uint)(html_msg.Length + 19)); //plain offset
-                writer.Write((uint)(html_msg.Length + plain_msg.Length)); //attrib offset
+                writer.Write((uint)(html_msg.Length + plain_msg.Length + 20)); //attrib offset
                 writer.Write(html_msg); //html message
                 writer.Write(plain_msg); //plain message
                 if (attributes != null) writer.Write(attributes); //attributes
@@ -475,27 +464,20 @@ namespace GG4NET
                 writer.Write((byte)0x01); // unknown
                 if (request != null && request != string.Empty) //request
                 {
-                    if (formatType == ContactListType.XML)
-                    {
-                        byte[] utfReq = Encoding.UTF8.GetBytes(request);
-                        using (MemoryStream memStream = new MemoryStream())
-                        {
-                            //2 first bytes
-                            byte[] headerBuffer = new byte[] { 120, 218 };
-                            memStream.Write(headerBuffer, 0, headerBuffer.Length);
+                    byte[] encReq = (formatType == ContactListType.XML ? Encoding.UTF8 : Encoding.GetEncoding("windows-1250")).GetBytes(request);
 
-                            using (DeflateStream dStream = new DeflateStream(memStream, CompressionMode.Compress))
-                            {
-                                dStream.Write(utfReq, 0, utfReq.Length);
-                            }
-                            writer.Write(memStream.ToArray());
-                            memStream.Close();
-                        }
-                    }
-                    else
+                    using (MemoryStream memStream = new MemoryStream())
                     {
-                        writer.Write(Encoding.GetEncoding("windows-1250").GetBytes(request));
+                        using (ZOutputStream deflater = new ZOutputStream(memStream, 9))
+                        {
+                            deflater.Write(encReq, 0, encReq.Length);
+                        }
+                        writer.Write(memStream.ToArray());
+
+                        memStream.Close();
                     }
+
+                    
                 }
 
                 return BuildHeader(Container.GG_USERLIST100_REQUEST, writer.Data);

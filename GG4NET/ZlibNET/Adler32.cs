@@ -1,28 +1,3 @@
-Copyright (c) 2013 Szymon Katra
-Ten produkt jest udostêpniony 'jak-jest', bez ¿adnych gwarancji, wyraŸnych lub dorozumianuch. W ¿adnym przypadku autorzy nie bêd¹ ponosiæ odpowiedzialnoœci za jakiekolwiek szkody wynikaj¹ce z korzystania z tego oprogramowania.
-
-Udziela siê zgody ka¿demu do korzystania z tego oprogramowania do jakichkolwiek celów, w tym komercyjnych, zmiany go i rozpowszechniania go za darmo, z zastrze¿eniem nastêpuj¹cych ograniczeñ:
-
-1. Pochodzenie tego oprogramowania nie mo¿e byæ nieprawdziwe, nie wolno twierdziæ, ¿e jest siê autorem oryginalnego oprogramowania. W przypadku korzystania z tego oprogramowania w produkcie, potwierdzenie w dokumentacji produktu bêdzie mile widziane, ale nie jest wymagane.
-
-2. Zmienione wersje Ÿród³owe musz¹ byæ wyraŸnie oznaczone jako takie, i nie mo¿e byæ podawane jako oryginalne oprogramowanie.
-
-3. Informacja ta nie mo¿e byæ usuniêta lub zmieniona we wszelkich formach dystrybucji Ÿród³owej.
-
-
-Copyright (c) 2013 Szymon Katra
-This software is provided 'as-is', without any express or implied warranty. In no event will the authors be held liable for any damages arising from the use of this software.
-
-Permission is granted to anyone to use this software for any purpose, including commercial applications, and to alter it and redistribute it freely, subject to the following restrictions:
-
-1. The origin of this software must not be misrepresented; you must not claim that you wrote the original software. If you use this software in a product, an acknowledgment in the product documentation would be appreciated but is not required.
-
-2. Altered source versions must be plainly marked as such, and must not be misrepresented as being the original software.
-
-3. This notice may not be removed or altered from any source distribution.
-
-
-Zlib.NET license:
 // Copyright (c) 2006, ComponentAce
 // http://www.componentace.com
 // All rights reserved.
@@ -33,6 +8,8 @@ Zlib.NET license:
 // Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution. 
 // Neither the name of ComponentAce nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission. 
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
 
 /*
 Copyright (c) 2000,2001,2002,2003 ymnk, JCraft,Inc. All rights reserved.
@@ -66,3 +43,66 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 * Jean-loup Gailly(jloup@gzip.org) and Mark Adler(madler@alumni.caltech.edu)
 * and contributors of zlib.
 */
+using System;
+namespace GG4NET
+{
+	
+	sealed class Adler32
+	{
+		
+		// largest prime smaller than 65536
+		private const int BASE = 65521;
+		// NMAX is the largest n such that 255n(n+1)/2 + (n+1)(BASE-1) <= 2^32-1
+		private const int NMAX = 5552;
+		
+		internal long adler32(long adler, byte[] buf, int index, int len)
+		{
+			if (buf == null)
+			{
+				return 1L;
+			}
+			
+			long s1 = adler & 0xffff;
+			long s2 = (adler >> 16) & 0xffff;
+			int k;
+			
+			while (len > 0)
+			{
+				k = len < NMAX?len:NMAX;
+				len -= k;
+				while (k >= 16)
+				{
+					s1 += (buf[index++] & 0xff); s2 += s1;
+					s1 += (buf[index++] & 0xff); s2 += s1;
+					s1 += (buf[index++] & 0xff); s2 += s1;
+					s1 += (buf[index++] & 0xff); s2 += s1;
+					s1 += (buf[index++] & 0xff); s2 += s1;
+					s1 += (buf[index++] & 0xff); s2 += s1;
+					s1 += (buf[index++] & 0xff); s2 += s1;
+					s1 += (buf[index++] & 0xff); s2 += s1;
+					s1 += (buf[index++] & 0xff); s2 += s1;
+					s1 += (buf[index++] & 0xff); s2 += s1;
+					s1 += (buf[index++] & 0xff); s2 += s1;
+					s1 += (buf[index++] & 0xff); s2 += s1;
+					s1 += (buf[index++] & 0xff); s2 += s1;
+					s1 += (buf[index++] & 0xff); s2 += s1;
+					s1 += (buf[index++] & 0xff); s2 += s1;
+					s1 += (buf[index++] & 0xff); s2 += s1;
+					k -= 16;
+				}
+				if (k != 0)
+				{
+					do 
+					{
+						s1 += (buf[index++] & 0xff); s2 += s1;
+					}
+					while (--k != 0);
+				}
+				s1 %= BASE;
+				s2 %= BASE;
+			}
+			return (s2 << 16) | s1;
+		}
+		
+	}
+}

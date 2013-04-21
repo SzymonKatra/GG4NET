@@ -59,6 +59,20 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="PublicDirectoryReply.cs" />
     <Compile Include="Utils.cs" />
+    <Compile Include="ZlibNET\Adler32.cs" />
+    <Compile Include="ZlibNET\Deflate.cs" />
+    <Compile Include="ZlibNET\InfBlocks.cs" />
+    <Compile Include="ZlibNET\InfCodes.cs" />
+    <Compile Include="ZlibNET\Inflate.cs" />
+    <Compile Include="ZlibNET\InfTree.cs" />
+    <Compile Include="ZlibNET\StaticTree.cs" />
+    <Compile Include="ZlibNET\SupportClass.cs" />
+    <Compile Include="ZlibNET\Tree.cs" />
+    <Compile Include="ZlibNET\ZInputStream.cs" />
+    <Compile Include="ZlibNET\Zlib.cs" />
+    <Compile Include="ZlibNET\ZOutputStream.cs" />
+    <Compile Include="ZlibNET\ZStream.cs" />
+    <Compile Include="ZlibNET\ZStreamException.cs" />
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
