@@ -352,7 +352,7 @@ namespace GG4NET
                     
                     break;
                 #endregion
-                default: cList = new ContactList(); break;
+                //default: cList = new ContactList(); break;
             }
 
             return cList;

@@ -157,12 +157,24 @@ namespace GG4NET
                 addr = reader.ReadLine() + "?tokenid=" + id;
                 reader.Close();
             }
-            tokenData = null;
-            return new System.Drawing.Bitmap(DataRequest(addr, "GET"));
+
+            Stream imgStream = DataRequest(addr, "GET");
+
+            byte[] buffer = new byte[16384];
+            int len;
+            PacketWriter output = new PacketWriter();
+            while ((len = imgStream.Read(buffer, 0, buffer.Length)) > 0)
+            {
+                output.Write(buffer, 0, len);
+            }
+            tokenData = output.Data;
+            output.Close();
+
+            return new System.Drawing.Bitmap(new MemoryStream(tokenData));
         }
         #endregion
 
-        #region Register
+        #region RegisterAccount
         /// <summary>
         /// Rejestruje nowy numer GG.
         /// </summary>
@@ -171,10 +183,10 @@ namespace GG4NET
         /// <param name="tokenId">Indetyfikator tokenu</param>
         /// <param name="tokenValue">Wartość tokenu</param>
         /// <returns>Zarejestrowany numer GG. -1 jeśli podano złą wartość tokenu, -2 jeśli zbyt długie hasło, -3 jeśli zły adres e-mail, 0 w przypadku innego błędu</returns>
-        public static uint Register(string password, string email, string tokenId, string tokenValue)
+        public static uint RegisterAccount(string password, string email, string tokenId, string tokenValue)
         {
             GGHTTPError ec;
-            return Register(password, email, tokenId, tokenValue, out ec);
+            return RegisterAccount(password, email, tokenId, tokenValue, out ec);
         }
         /// <summary>
         /// Rejestruje nowy numer GG.
@@ -184,8 +196,8 @@ namespace GG4NET
         /// <param name="tokenId">Indetyfikator tokenu</param>
         /// <param name="tokenValue">Wartość tokenu</param>
         /// <param name="errorCode">Kod błędu</param>
-        /// <returns>Zarejestrowany numer GG. -1 jeśli podano złą wartość tokenu, -2 jeśli zbyt długie hasło, -3 jeśli zły adres e-mail, 0 w przypadku innego błędu</returns>
-        public static uint Register(string password, string email, string tokenId, string tokenValue, out GGHTTPError errorCode)
+        /// <returns>Zarejestrowany numer GG</returns>
+        public static uint RegisterAccount(string password, string email, string tokenId, string tokenValue, out GGHTTPError errorCode)
         {
             string query = string.Format("?pwd={0}&email={1}&tokenid={2}&tokenval={3}&code={4}", password, email, tokenId, tokenValue, Hash(new string[] { email, password }).ToString());
             string resp = StringRequest("http://register.gadu-gadu.pl/fmregister.php" + query, "POST", false);
@@ -201,29 +213,25 @@ namespace GG4NET
                 else
                 {
                     errorCode = GGHTTPError.None;
-                    return 0;
                 }
             }
             else if (resp.StartsWith("bad_tokenval"))
             {
                 errorCode = GGHTTPError.BadTokenValue;
-                return -1;
             }
             else if (resp.StartsWith("error3"))
             {
                 errorCode = GGHTTPError.PasswordTooLong;
-                return -2;
             }
             else if (resp == string.Empty)
             {
                 errorCode = GGHTTPError.BadEmail;
-                return -3;
             }
             else
             {
                 errorCode = GGHTTPError.None;
-                return 0;
             }
+            return 0;
         }
         #endregion
 
@@ -238,7 +246,7 @@ namespace GG4NET
         /// <param name="tokenId">Indetyfikator tokenu</param>
         /// <param name="tokenValue">Wartość tokenu</param>
         /// <returns>Kod błędu</returns>
-        public static GGHTTPError ChangePassword(uint uin, string oldPassword, string newPassword, string email, string tokenId, string tokenValue)
+        public static GGHTTPError ChangeAccountPassword(uint uin, string oldPassword, string newPassword, string email, string tokenId, string tokenValue)
         {
             string query = string.Format("?fmnumber={0}&fmpwd={1}&pwd={2}&email={3}&tokenid={4}&tokenval={5}&code={6}", uin.ToString(), oldPassword, newPassword, email, tokenId, tokenValue, Hash(new string[] { email, newPassword }));
             string resp = StringRequest("http://register.gadu-gadu.pl/fmregister.php" + query, "POST", false);
@@ -264,10 +272,10 @@ namespace GG4NET
         /// <param name="tokenId">Indetyfikator tokenu</param>
         /// <param name="tokenValue">Wartość tokenu</param>
         /// <returns>Kod błędu</returns>
-        public static GGHTTPError RemindPassword(uint uin, string tokenId, string tokenValue)
+        public static GGHTTPError RemindAccountPassword(uint uin, string tokenId, string tokenValue)
         {
             string query = string.Format("?userid={0}&tokenid={1}&tokenval={2}&code={3}", uin.ToString(), tokenId, tokenValue, Hash(new string[] { uin.ToString() }));
-            string resp = StringRequest("http://register.gadu-gadu.pl/fmsendpwd.php" + query, "POST", false);
+            string resp = StringRequest("http://retr.gadu-gadu.pl/fmsendpwd.php" + query, "POST", false);
 
             if (resp.StartsWith("pwdsend_success"))
                 return GGHTTPError.Success;
