@@ -57,9 +57,9 @@ namespace GG4NET
 		
 		internal class Config
 		{
-			internal int good_length; // reduce lazy search above this match length
-			internal int max_lazy; // do not perform lazy search above this match length
-			internal int nice_length; // quit search above this match length
+			internal int good_length; // reduce lazy search above this match structHeader
+			internal int max_lazy; // do not perform lazy search above this match structHeader
+			internal int nice_length; // quit search above this match structHeader
 			internal int max_chain;
 			internal int func;
 			internal Config(int good_length, int max_lazy, int nice_length, int max_chain, int func)
@@ -132,13 +132,13 @@ namespace GG4NET
 		
 		private const int Buf_size = 8 * 2;
 		
-		// repeat previous bit length 3-6 times (2 bits of repeat count)
+		// repeat previous bit structHeader 3-6 times (2 bits of repeat count)
 		private const int REP_3_6 = 16;
 		
-		// repeat a zero length 3-10 times  (3 bits of repeat count)
+		// repeat a zero structHeader 3-10 times  (3 bits of repeat count)
 		private const int REPZ_3_10 = 17;
 		
-		// repeat a zero length 11-138 times  (7 bits of repeat count)
+		// repeat a zero structHeader 11-138 times  (7 bits of repeat count)
 		private const int REPZ_11_138 = 18;
 		
 		private const int MIN_MATCH = 3;
@@ -175,7 +175,7 @@ namespace GG4NET
 		// and move to the first half later to keep a dictionary of at least wSize
 		// bytes. With this organization, matches are limited to a distance of
 		// wSize-MAX_MATCH bytes, but this ensures that IO is always
-		// performed with a length multiple of the block size. Also, it limits
+		// performed with a structHeader multiple of the block size. Also, it limits
 		// the window size to 64K, which is quite useful on MSDOS.
 		// To do: use the user input buffer as sliding window.
 		
@@ -206,7 +206,7 @@ namespace GG4NET
 		
 		internal int block_start;
 		
-		internal int match_length; // length of best match
+		internal int match_length; // structHeader of best match
 		internal int prev_match; // previous match
 		internal int match_available; // set if previous match exists
 		internal int strstart; // start of string to insert
@@ -218,7 +218,7 @@ namespace GG4NET
 		internal int prev_length;
 		
 		// To speed up deflation, hash chains are never searched beyond this
-		// length.  A higher limit improves compression ratio but degrades the speed.
+		// structHeader.  A higher limit improves compression ratio but degrades the speed.
 		internal int max_chain_length;
 		
 		// Attempt to find a better match only when the current match is strictly
@@ -226,8 +226,8 @@ namespace GG4NET
 		// levels >= 4.
 		internal int max_lazy_match;
 		
-		// Insert new strings in the hash table only if the match length is not
-		// greater than this length. This saves time but degrades compression.
+		// Insert new strings in the hash table only if the match structHeader is not
+		// greater than this structHeader. This saves time but degrades compression.
 		// max_insert_length is used only for compression levels <= 3.
 		
 		internal int level; // compression level (1..9)
@@ -239,15 +239,15 @@ namespace GG4NET
 		// Stop searching when current match exceeds this
 		internal int nice_match;
 		
-		internal short[] dyn_ltree; // literal and length tree
+		internal short[] dyn_ltree; // literal and structHeader tree
 		internal short[] dyn_dtree; // distance tree
 		internal short[] bl_tree; // Huffman tree for bit lengths
 		
 		internal Tree l_desc = new Tree(); // desc for literal tree
 		internal Tree d_desc = new Tree(); // desc for distance tree
-		internal Tree bl_desc = new Tree(); // desc for bit length tree
+		internal Tree bl_desc = new Tree(); // desc for bit structHeader tree
 		
-		// number of codes at each bit length for an optimal tree
+		// number of codes at each bit structHeader for an optimal tree
 		internal short[] bl_count = new short[MAX_BITS + 1];
 		
 		// heap used to build the Huffman trees
@@ -290,10 +290,10 @@ namespace GG4NET
 		
 		internal int d_buf; // index of pendig_buf
 		
-		internal int opt_len; // bit length of current block with optimal trees
-		internal int static_len; // bit length of current block with static trees
+		internal int opt_len; // bit structHeader of current block with optimal trees
+		internal int static_len; // bit structHeader of current block with static trees
 		internal int matches; // number of string matches in current block
-		internal int last_eob_len; // bit length of EOB code for last block
+		internal int last_eob_len; // bit structHeader of EOB code for last block
 		
 		// Output buffer. bits are inserted starting at the bottom (least
 		// significant bits).
@@ -403,13 +403,13 @@ namespace GG4NET
 		}
 		
 		// Scan a literal or distance tree to determine the frequencies of the codes
-		// in the bit length tree.
+		// in the bit structHeader tree.
 		internal void  scan_tree(short[] tree, int max_code)
 		{
 			int n; // iterates over all tree elements
-			int prevlen = - 1; // last emitted length
-			int curlen; // length of current code
-			int nextlen = tree[0 * 2 + 1]; // length of next code
+			int prevlen = - 1; // last emitted structHeader
+			int curlen; // structHeader of current code
+			int nextlen = tree[0 * 2 + 1]; // structHeader of next code
 			int count = 0; // repeat count of the current code
 			int max_count = 7; // max repeat count
 			int min_count = 4; // min repeat count
@@ -462,29 +462,29 @@ namespace GG4NET
 		}
 		
 		// Construct the Huffman tree for the bit lengths and return the index in
-		// bl_order of the last bit length code to send.
+		// bl_order of the last bit structHeader code to send.
 		internal int build_bl_tree()
 		{
-			int max_blindex; // index of last bit length code of non zero freq
+			int max_blindex; // index of last bit structHeader code of non zero freq
 			
-			// Determine the bit length frequencies for literal and distance trees
+			// Determine the bit structHeader frequencies for literal and distance trees
 			scan_tree(dyn_ltree, l_desc.max_code);
 			scan_tree(dyn_dtree, d_desc.max_code);
 			
-			// Build the bit length tree:
+			// Build the bit structHeader tree:
 			bl_desc.build_tree(this);
-			// opt_len now includes the length of the tree representations, except
+			// opt_len now includes the structHeader of the tree representations, except
 			// the lengths of the bit lengths codes and the 5+5+4 bits for the counts.
 			
-			// Determine the number of bit length codes to send. The pkzip format
-			// requires that at least 4 bit length codes be sent. (appnote.txt says
+			// Determine the number of bit structHeader codes to send. The pkzip format
+			// requires that at least 4 bit structHeader codes be sent. (appnote.txt says
 			// 3 but the actual value used is 4.)
 			for (max_blindex = BL_CODES - 1; max_blindex >= 3; max_blindex--)
 			{
 				if (bl_tree[Tree.bl_order[max_blindex] * 2 + 1] != 0)
 					break;
 			}
-			// Update opt_len to include the bit length tree and counts
+			// Update opt_len to include the bit structHeader tree and counts
 			opt_len += 3 * (max_blindex + 1) + 5 + 5 + 4;
 			
 			return max_blindex;
@@ -492,7 +492,7 @@ namespace GG4NET
 		
 		
 		// Send the header for a block using dynamic Huffman trees: the counts, the
-		// lengths of the bit length codes, the literal tree and the distance tree.
+		// lengths of the bit structHeader codes, the literal tree and the distance tree.
 		// IN assertion: lcodes >= 257, dcodes >= 1, blcodes >= 4.
 		internal void  send_all_trees(int lcodes, int dcodes, int blcodes)
 		{
@@ -514,9 +514,9 @@ namespace GG4NET
 		internal void  send_tree(short[] tree, int max_code)
 		{
 			int n; // iterates over all tree elements
-			int prevlen = - 1; // last emitted length
-			int curlen; // length of current code
-			int nextlen = tree[0 * 2 + 1]; // length of next code
+			int prevlen = - 1; // last emitted structHeader
+			int curlen; // structHeader of current code
+			int nextlen = tree[0 * 2 + 1]; // structHeader of next code
 			int count = 0; // repeat count of the current code
 			int max_count = 7; // max repeat count
 			int min_count = 4; // min repeat count
@@ -642,7 +642,7 @@ namespace GG4NET
 			
 			// Of the 10 bits for the empty block, we have already sent
 			// (10 - bi_valid) bits. The lookahead for the last real code (before
-			// the EOB of the previous block) was thus at least one plus the length
+			// the EOB of the previous block) was thus at least one plus the structHeader
 			// of the EOB plus what we have just sent of the empty static block.
 			if (1 + last_eob_len + 10 - bi_valid < 9)
 			{
@@ -672,7 +672,7 @@ namespace GG4NET
 			else
 			{
 				matches++;
-				// Here, lc is the match length - MIN_MATCH
+				// Here, lc is the match structHeader - MIN_MATCH
 				dist--; // dist = match distance - 1
 				dyn_ltree[(Tree._length_code[lc] + LITERALS + 1) * 2]++;
 				dyn_dtree[Tree.d_code(dist) * 2]++;
@@ -680,7 +680,7 @@ namespace GG4NET
 			
 			if ((last_lit & 0x1fff) == 0 && level > 2)
 			{
-				// Compute an upper bound for the compressed length
+				// Compute an upper bound for the compressed structHeader
 				int out_length = last_lit * 8;
 				int in_length = strstart - block_start;
 				int dcode;
@@ -703,7 +703,7 @@ namespace GG4NET
 		internal void  compress_block(short[] ltree, short[] dtree)
 		{
 			int dist; // distance of matched string
-			int lc; // match length or unmatched char (if dist == 0)
+			int lc; // match structHeader or unmatched char (if dist == 0)
 			int lx = 0; // running index in l_buf
 			int code; // the code to send
 			int extra; // number of extra bits to send
@@ -721,15 +721,15 @@ namespace GG4NET
 					}
 					else
 					{
-						// Here, lc is the match length - MIN_MATCH
+						// Here, lc is the match structHeader - MIN_MATCH
 						code = Tree._length_code[lc];
 						
-						send_code(code + LITERALS + 1, ltree); // send the length code
+						send_code(code + LITERALS + 1, ltree); // send the structHeader code
 						extra = Tree.extra_lbits[code];
 						if (extra != 0)
 						{
 							lc -= Tree.base_length[code];
-							send_bits(lc, extra); // send the extra length bits
+							send_bits(lc, extra); // send the extra structHeader bits
 						}
 						dist--; // dist is now the match distance - 1
 						code = Tree.d_code(dist);
@@ -808,7 +808,7 @@ namespace GG4NET
 			bi_valid = 0;
 		}
 		
-		// Copy a stored block, storing first the length and its
+		// Copy a stored block, storing first the structHeader and its
 		// one's complement if requested.
 		internal void  copy_block(int buf, int len, bool header)
 		{
@@ -914,7 +914,7 @@ namespace GG4NET
 		internal void  _tr_flush_block(int buf, int stored_len, bool eof)
 		{
 			int opt_lenb, static_lenb; // opt_len and static_len in bytes
-			int max_blindex = 0; // index of last bit length code of non zero freq
+			int max_blindex = 0; // index of last bit structHeader code of non zero freq
 			
 			// Build the Huffman trees unless a stored block is forced
 			if (level > 0)
@@ -931,11 +931,11 @@ namespace GG4NET
 				// At this point, opt_len and static_len are the total bit lengths of
 				// the compressed block data, excluding the tree representations.
 				
-				// Build the bit length tree for the above two trees, and get the index
-				// in bl_order of the last bit length code to send.
+				// Build the bit structHeader tree for the above two trees, and get the index
+				// in bl_order of the last bit structHeader code to send.
 				max_blindex = build_bl_tree();
 				
-				// Determine the best encoding. Compute first the block length in bytes
+				// Determine the best encoding. Compute first the block structHeader in bytes
 				opt_lenb = SupportClass.URShift((opt_len + 3 + 7), 3);
 				static_lenb = SupportClass.URShift((static_len + 3 + 7), 3);
 				
@@ -1140,7 +1140,7 @@ namespace GG4NET
 					
 					lookahead -= match_length;
 					
-					// Insert new strings in the hash table only if the match length
+					// Insert new strings in the hash table only if the match structHeader
 					// is not too large. This saves time but degrades compression.
 					if (match_length <= max_lazy_match && lookahead >= MIN_MATCH)
 					{
@@ -1354,11 +1354,11 @@ namespace GG4NET
 		
 		internal int longest_match(int cur_match)
 		{
-			int chain_length = max_chain_length; // max hash chain length
+			int chain_length = max_chain_length; // max hash chain structHeader
 			int scan = strstart; // current string
 			int match; // matched string
-			int len; // length of current match
-			int best_len = prev_length; // best match length so far
+			int len; // structHeader of current match
+			int best_len = prev_length; // best match structHeader so far
 			int limit = strstart > (w_size - MIN_LOOKAHEAD)?strstart - (w_size - MIN_LOOKAHEAD):0;
 			int nice_match = this.nice_match;
 			
@@ -1389,8 +1389,8 @@ namespace GG4NET
 			{
 				match = cur_match;
 				
-				// Skip to next match if the match length cannot increase
-				// or if the match length is less than 2:
+				// Skip to next match if the match structHeader cannot increase
+				// or if the match structHeader is less than 2:
 				if (window[match + best_len] != scan_end || window[match + best_len - 1] != scan_end1 || window[match] != window[scan] || window[++match] != window[scan + 1])
 					continue;
 				
@@ -1483,7 +1483,7 @@ namespace GG4NET
 			lit_bufsize = 1 << (memLevel + 6); // 16K elements by default
 			
 			// We overlay pending_buf and d_buf+l_buf. This works since the average
-			// output size for (length,distance) codes is <= 24 bits.
+			// output size for (structHeader,distance) codes is <= 24 bits.
 			pending_buf = new byte[lit_bufsize * 4];
 			pending_buf_size = lit_bufsize * 4;
 			

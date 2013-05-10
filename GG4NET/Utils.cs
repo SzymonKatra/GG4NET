@@ -4,9 +4,75 @@ using System.Security.Cryptography;
 
 namespace GG4NET
 {
-    internal static class Utils
+    /// <summary>
+    /// Metody pomocnicze.
+    /// </summary>
+    public static class Utils
     {
-        public static byte[] CalculateSHA1Hash(string password, uint seed)
+        //SOURCE: http://www.sanity-free.com/12/crc32_implementation_in_csharp.html
+        private static class Crc32
+        {
+            private static uint[] table;
+
+            public static uint ComputeChecksum(byte[] bytes)
+            {
+                uint crc = 0xffffffff;
+                for (int i = 0; i < bytes.Length; ++i)
+                {
+                    byte index = (byte)(((crc) & 0xff) ^ bytes[i]);
+                    crc = (uint)((crc >> 8) ^ table[index]);
+                }
+                return ~crc;
+            }
+            public static byte[] ComputeChecksumBytes(byte[] bytes)
+            {
+                return BitConverter.GetBytes(ComputeChecksum(bytes));
+            }
+
+            static Crc32()
+            {
+                uint poly = 0xedb88320;
+                table = new uint[256];
+                uint temp = 0;
+                for (uint i = 0; i < table.Length; ++i)
+                {
+                    temp = i;
+                    for (int j = 8; j > 0; --j)
+                    {
+                        if ((temp & 1) == 1)
+                        {
+                            temp = (uint)((temp >> 1) ^ poly);
+                        }
+                        else
+                        {
+                            temp >>= 1;
+                        }
+                    }
+                    table[i] = temp;
+                }
+            }
+        }
+        /// <summary>
+        /// Oblicza sumę kontrolną CRC32 z podanych danych.
+        /// </summary>
+        /// <param name="data">Dane.</param>
+        /// <returns>Suma kontrolna CRC32.</returns>
+        public static long ComputeCrc32(byte[] data)
+        {
+            return Crc32.ComputeChecksum(data);
+        }
+        /// <summary>
+        /// Oblicz hash obrazka.
+        /// </summary>
+        /// <param name="crc32">Suma kontrolna CRC32.</param>
+        /// <param name="length">Wielkość obrazka w bajtach.</param>
+        /// <returns>Hash obrazka.</returns>
+        public static string ComputeHash(long crc32, long length)
+        {
+            return crc32.ToString("X8") + length.ToString("X8");
+        }
+
+        internal static byte[] CalculateSHA1Hash(string password, uint seed)
         {
             SHA1 sha = SHA1.Create();
             byte[] hash = new byte[64];
@@ -19,7 +85,7 @@ namespace GG4NET
             return hash;
         }
 
-        public static uint ToInternalStatus(Status status, bool description)
+        internal static uint ToInternalStatus(Status status, bool description)
         {
             switch (status)
             {
@@ -33,7 +99,7 @@ namespace GG4NET
             }
             return 0x0;
         }
-        public static Status ToPublicStatus(uint status, out bool description)
+        internal static Status ToPublicStatus(uint status, out bool description)
         {
             description = false;
             switch (status)
@@ -55,7 +121,7 @@ namespace GG4NET
             return Status.None;
         }
 
-        public static uint ToInternalContactType(ContactType type)
+        internal static uint ToInternalContactType(ContactType type)
         {
             switch (type)
             {
@@ -65,7 +131,7 @@ namespace GG4NET
                 default: return 0;
             }
         }
-        public static ContactType ToPublicContactType(uint type)
+        internal static ContactType ToPublicContactType(uint type)
         {
             switch (type)
             {
@@ -76,7 +142,7 @@ namespace GG4NET
             }
         }
 
-        public static ushort ToInternalTypingNotify(TypingNotifyType type)
+        internal static ushort ToInternalTypingNotify(TypingNotifyType type)
         {
             switch (type)
             {
@@ -85,7 +151,7 @@ namespace GG4NET
                 default: return 0;
             }
         }
-        public static TypingNotifyType ToPublicTypingNotify(ushort type)
+        internal static TypingNotifyType ToPublicTypingNotify(ushort type)
         {
             switch (type)
             {
@@ -95,7 +161,7 @@ namespace GG4NET
             }
         }
 
-        public static uint ToInternalGender(Gender gender, bool inverted = false)
+        internal static uint ToInternalGender(Gender gender, bool inverted = false)
         {
             switch (gender)
             {
@@ -104,7 +170,7 @@ namespace GG4NET
                 default: return 0;
             }
         }
-        public static Gender ToPublicGender(uint gender, bool inverted = false)
+        internal static Gender ToPublicGender(uint gender, bool inverted = false)
         {
             switch (gender)
             {
@@ -114,7 +180,7 @@ namespace GG4NET
             }
         }
 
-        public static byte ToInternalContactListFormat(ContactListType type)
+        internal static byte ToInternalContactListFormat(ContactListType type)
         {
             switch (type)
             {
@@ -123,7 +189,7 @@ namespace GG4NET
                 default: return Container.GG_USERLIST100_FORMAT_TYPE_NONE;
             }
         }
-        public static ContactListType ToPublicContactListFormat(byte type)
+        internal static ContactListType ToPublicContactListFormat(byte type)
         {
             switch (type)
             {

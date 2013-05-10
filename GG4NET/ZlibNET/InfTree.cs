@@ -80,7 +80,7 @@ namespace GG4NET
 		internal static readonly int[] cpdext = new int[]{0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13};
 		
 		// If BMAX needs to be larger than 16, then h and x[] should be uLong.
-		internal const int BMAX = 15; // maximum bit length of any code
+		internal const int BMAX = 15; // maximum bit structHeader of any code
 		
 		internal static int huft_build(int[] b, int bindex, int n, int s, int[] d, int[] e, int[] t, int[] m, int[] hp, int[] hn, int[] v)
 		{
@@ -90,10 +90,10 @@ namespace GG4NET
 			// case), Z_DATA_ERROR if the input is invalid (an over-subscribed set of
 			// lengths), or Z_MEM_ERROR if not enough memory.
 			
-			int a; // counter for codes of length k
-			int[] c = new int[BMAX + 1]; // bit length count table
+			int a; // counter for codes of structHeader k
+			int[] c = new int[BMAX + 1]; // bit structHeader count table
 			int f; // i repeats in table every f entries
-			int g; // maximum code length
+			int g; // maximum code structHeader
 			int h; // table level
 			int i; // counter, current code
 			int j; // counter
@@ -110,7 +110,7 @@ namespace GG4NET
 			int y; // number of dummy codes added
 			int z; // number of entries in current table
 			
-			// Generate counts for each bit length
+			// Generate counts for each bit structHeader
 			
 			p = 0; i = n;
 			do 
@@ -121,18 +121,18 @@ namespace GG4NET
 			
 			if (c[0] == n)
 			{
-				// null input--all zero length codes
+				// null input--all zero structHeader codes
 				t[0] = - 1;
 				m[0] = 0;
 				return Z_OK;
 			}
 			
-			// Find minimum and maximum length, bound *m by those
+			// Find minimum and maximum structHeader, bound *m by those
 			l = m[0];
 			for (j = 1; j <= BMAX; j++)
 				if (c[j] != 0)
 					break;
-			k = j; // minimum code length
+			k = j; // minimum code structHeader
 			if (l < j)
 			{
 				l = j;
@@ -142,14 +142,14 @@ namespace GG4NET
 				if (c[i] != 0)
 					break;
 			}
-			g = i; // maximum code length
+			g = i; // maximum code structHeader
 			if (l > i)
 			{
 				l = i;
 			}
 			m[0] = l;
 			
-			// Adjust last length count to fill out codes, if needed
+			// Adjust last structHeader count to fill out codes, if needed
 			for (y = 1 << j; j < i; j++, y <<= 1)
 			{
 				if ((y -= c[j]) < 0)
@@ -163,7 +163,7 @@ namespace GG4NET
 			}
 			c[i] += y;
 			
-			// Generate starting offsets into the value table for each length
+			// Generate starting offsets into the value table for each structHeader
 			x[1] = j = 0;
 			p = 1; xp = 2;
 			while (--i != 0)
@@ -185,7 +185,7 @@ namespace GG4NET
 				p++;
 			}
 			while (++i < n);
-			n = x[g]; // set n to length of v
+			n = x[g]; // set n to structHeader of v
 			
 			// Generate the Huffman codes and for each, make the table entries
 			x[0] = i = 0; // first Huffman code is zero
@@ -202,7 +202,7 @@ namespace GG4NET
 				a = c[k];
 				while (a-- != 0)
 				{
-					// here i is the Huffman code of length k bits for value *p
+					// here i is the Huffman code of structHeader k bits for value *p
 					// make tables up to required level
 					while (k > w + l)
 					{
@@ -324,7 +324,7 @@ namespace GG4NET
 			int[] hn = new int[1]; // hufts used in space
 			int[] v = new int[288]; // work area for huft_build
 			
-			// build literal/length tree
+			// build literal/structHeader tree
 			r = huft_build(c, 0, nl, 257, cplens, cplext, tl, bl, hp, hn, v);
 			if (r != Z_OK || bl[0] == 0)
 			{

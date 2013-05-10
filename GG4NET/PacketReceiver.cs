@@ -51,7 +51,7 @@ namespace GG4NET
                     pos += toRead;
                     ReadFinished(toRead);
                 }
-                else //receiving packet length
+                else //receiving packet structHeader
                 {
                     int toRead = Math.Min(_packetLengthBuffer.Length - _bytesReceived, available);
                     Array.Copy(buffer, pos, _packetLengthBuffer, _bytesReceived, toRead);

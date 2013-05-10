@@ -115,6 +115,21 @@ namespace GG4NET
         public const byte GG_USERLIST100_REPLY_LIST = 0x00;
         public const byte GG_USERLIST100_REPLY_ACK = 0x10;
         public const byte GG_USERLIST100_REPLY_REJECT = 0x12;
-        public const byte GG_USERLIST100_REPLY_REJECT_V2 = 0x13;
+        public const byte GG_USERLIST100_REPLY_BAD_FORMAT = 0x13;
+
+        public const byte GG_CONFERENCE_FLAG = 0x01;
+        public const byte GG_ATTRIBUTES_FLAG = 0x02;
+        public const byte GG_FONT_BOLD = 0x01;
+        public const byte GG_FONT_ITALIC = 0x02;
+        public const byte GG_FONT_UNDERLINE = 0x04;
+        public const byte GG_FONT_COLOR = 0x08;
+        public const byte GG_FONT_IMAGE = 0x80;
+
+        public const byte GG_IMAGE_CONST_FIRST = 0x09;
+        public const byte GG_IMAGE_CONST_LAST = 0x01;
+
+        public const byte GG_IMAGE_REQUEST_FLAG = 0x04;
+        public const byte GG_IMAGE_RESPONSE_FLAG = 0x05;
+        public const byte GG_IMAGE_RESPONSE_FLAG_MORE_DATA = 0x05;
     }
 }

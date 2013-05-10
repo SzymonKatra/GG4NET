@@ -1,4 +1,5 @@
-﻿
+﻿using System;
+
 namespace GG4NET
 {
     /// <summary>
@@ -95,5 +96,29 @@ namespace GG4NET
         /// Format XML. Używany przez nowsze wersje GG.
         /// </summary>
         XML,
+    }
+
+    /// <summary>
+    /// Flagi formatowania tekstu.
+    /// </summary>
+    [Flags]
+    public enum MessageFormatting
+    {
+        /// <summary>Brak formatowania.</summary>
+        None = 0,
+        /// <summary>Tekst pogrubiony.</summary>
+        Bold = 1 << 0,
+        /// <summary>Tekst pochyły.</summary>
+        Italic = 1 << 1,
+        /// <summary>Tekst podkreślony.</summary>
+        Underline = 1 << 2,
+        /// <summary>Tekst skreślony.</summary>
+        Erasure = 1 << 3,
+        /// <summary>Dodaj nową linię na koniec tekstu.</summary>
+        NewLine = 1 << 4,
+        /// <summary>Indeks górny.</summary>
+        Superscript = 1 << 5,
+        /// <summary>Indeks dolny.</summary>
+        Subscript = 1 << 6,
     }
 }

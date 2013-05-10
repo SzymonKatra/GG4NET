@@ -166,7 +166,7 @@ namespace GG4NET
         /// </summary>
         public void Disconnect()
         {
-            if (_socket == null) throw new Exception("You are not connected!");
+            if (_socket == null || !_socket.Connected) throw new Exception("You are not connected!");
             _socket.BeginDisconnect(false, new AsyncCallback(OnDisconnectCallback), _socket);
         }
         #endregion
@@ -179,40 +179,55 @@ namespace GG4NET
         /// <param name="message">Wiadomość</param>
         public void SendMessage(uint recipient, string message)
         {
-            SendMessage(recipient, message, string.Format("<span style=\"color:#000000; font-family:'MS Shell Dlg 2'; font-size:9pt; \">{0}</span>\0", message), null);
+            MessageBuilder builder = new MessageBuilder();
+            builder.AppendText(message);
+            SendMessage(recipient, builder);
         }
+        ///// <summary>
+        ///// Wyślij wiadomość na dany numerek GG.
+        ///// </summary>
+        ///// <param name="recipient">Odbiorca</param>
+        ///// <param name="message">Wiadomość</param>
+        ///// <param name="attributes">Atrybuty wiadomości</param>
+        //public void SendMessage(uint recipient, string message, byte[] attributes)
+        //{
+        //    SendMessage(recipient, message, string.Format("<span style=\"color:#000000; font-family:'MS Shell Dlg 2'; font-size:9pt; \">{0}</span>\0", message), attributes);
+        //}
+        ///// <summary>
+        ///// Wyślij wiadomość na dany numerek GG.
+        ///// </summary>
+        ///// <param name="recipient">Odbiorca</param>
+        ///// <param name="message">Wiadomość</param>
+        ///// <param name="htmlMessage">Wiadomość w formacie HTML</param>
+        //public void SendMessage(uint recipient, string message, string htmlMessage)
+        //{
+        //    SendMessage(recipient, message, htmlMessage, null);
+        //}
+        ///// <summary>
+        ///// Wyślij wiadomość na dany numerek GG.
+        ///// </summary>
+        ///// <param name="recipient">Odbiorca</param>
+        ///// <param name="message">Wiadomość</param>
+        ///// <param name="htmlMessage">Wiadomość w formacie HTML</param>
+        ///// <param name="attributes">Atrybuty wiadomości</param>
+        //public void SendMessage(uint recipient, string message, string htmlMessage, byte[] attributes)
+        //{
+        //    if (_isLogged)
+        //    {
+        //        Send(Packets.WriteSendMessage(recipient, message, htmlMessage, attributes));
+        //    }
+        //    else throw new NotLoggedException("You are not logged to GG network!");
+        //}
         /// <summary>
         /// Wyślij wiadomość na dany numerek GG.
         /// </summary>
         /// <param name="recipient">Odbiorca</param>
         /// <param name="message">Wiadomość</param>
-        /// <param name="attributes">Atrybuty wiadomości</param>
-        public void SendMessage(uint recipient, string message, byte[] attributes)
-        {
-            SendMessage(recipient, message, string.Format("<span style=\"color:#000000; font-family:'MS Shell Dlg 2'; font-size:9pt; \">{0}</span>\0", message), attributes);
-        }
-        /// <summary>
-        /// Wyślij wiadomość na dany numerek GG.
-        /// </summary>
-        /// <param name="recipient">Odbiorca</param>
-        /// <param name="message">Wiadomość</param>
-        /// <param name="htmlMessage">Wiadomość w formacie HTML</param>
-        public void SendMessage(uint recipient, string message, string htmlMessage)
-        {
-            SendMessage(recipient, message, htmlMessage, null);
-        }
-        /// <summary>
-        /// Wyślij wiadomość na dany numerek GG.
-        /// </summary>
-        /// <param name="recipient">Odbiorca</param>
-        /// <param name="message">Wiadomość</param>
-        /// <param name="htmlMessage">Wiadomość w formacie HTML</param>
-        /// <param name="attributes">Atrybuty wiadomości</param>
-        public void SendMessage(uint recipient, string message, string htmlMessage, byte[] attributes)
+        public void SendMessage(uint recipient, MessageBuilder message)
         {
             if (_isLogged)
             {
-                Send(Packets.WriteSendMessage(recipient, message, htmlMessage, attributes));
+                Send(Packets.WriteSendMessage(recipient, message.PlainMessage, message.HtmlMessage, message.Attributes));
             }
             else throw new NotLoggedException("You are not logged to GG network!");
         }
@@ -224,28 +239,29 @@ namespace GG4NET
         /// <param name="message">Wiadomość</param>
         public void SendMessage(uint[] recipients, string message)
         {
-            SendMessage(recipients, message, string.Format("<span style=\"color:#000000; font-family:'MS Shell Dlg 2'; font-size:9pt; \">{0}</span>\0", message));
+            MessageBuilder builder = new MessageBuilder();
+            builder.AppendText(message);
+            SendMessage(recipients, builder);
         }
         /// <summary>
         /// Wyślij wiadomość konferencyjną.
         /// </summary>
         /// <param name="recipients">Odbiorcy</param>
         /// <param name="message">Wiadomość</param>
-        /// <param name="htmlMessage">Wiadomość w formacie HTML</param>
-        public void SendMessage(uint[] recipients, string message, string htmlMessage)
+        public void SendMessage(uint[] recipients, MessageBuilder message)
         {
             if (_isLogged)
             {
-                byte[] baseConfAttrib = new byte[5];
-                baseConfAttrib[0] = 0x01; //conference flag
+                byte[] conferenceHeader = new byte[5];
+                conferenceHeader[0] = Container.GG_CONFERENCE_FLAG;
                 byte[] lenBytes = BitConverter.GetBytes((uint)recipients.Length - 1);
-                Buffer.BlockCopy(lenBytes, 0, baseConfAttrib, 1, 4); //write number of recipients
+                Buffer.BlockCopy(lenBytes, 0, conferenceHeader, 1, 4); //write number of recipients
 
                 foreach (uint uin in recipients)
                 {
                     using (PacketWriter writer = new PacketWriter())
                     {
-                        writer.Write(baseConfAttrib);
+                        writer.Write(conferenceHeader);
 
                         foreach (uint recNumber in recipients)
                         {
@@ -253,9 +269,14 @@ namespace GG4NET
                             writer.Write(recNumber);
                         }
 
-                        //writer.Write((byte)0x02);
+                        //byte[] conferenceBody = writer.Data;
+                        //byte[] allAttributes = new byte[message.Attributes.Length + conferenceBody.Length];
+                        
+                        //Buffer.BlockCopy(conferenceBody, 0, allAttributes, 0, conferenceBody.Length);
+                        //Buffer.BlockCopy(message.Attributes, 0, allAttributes, conferenceBody.Length, message.Attributes.Length);                
 
-                        SendMessage(uin, message, htmlMessage, writer.Data);
+                        Send(Packets.WriteSendMessage(uin, message.PlainMessage, message.HtmlMessage, writer.Data/*allAttributes*/));
+                        //TODO: fix conference with plain formatted message
 
                         writer.Close();
                     }
@@ -517,9 +538,10 @@ namespace GG4NET
             {
                 _isLogged = false;
                 _socket.Close();
+                _socket = null;
             }
             catch { }
-            _pingTimer.Stop();
+            if (_pingTimer != null) _pingTimer.Stop();
         }
         #endregion
 
@@ -561,6 +583,7 @@ namespace GG4NET
             _pingTimer.Start();
 
             _isLogged = true;
+
             OnLogged();
         }
         /// <summary>
@@ -587,24 +610,26 @@ namespace GG4NET
             Packets.ReadReceiveMessage(data, out uin, out seq, out time, out plain, out html, out attrib);
 
             uint[] confMembers = null;
-            if (attrib.Length >= 2)
+            uint count = 0;
+            try
             {
-                if (attrib[0] == 0 && attrib[1] == 1)//conference message
+                for (int i = 0; i < attrib.Length; i++)
                 {
-                    try
+                    if (attrib[i] == Container.GG_CONFERENCE_FLAG)
                     {
                         using (PacketReader reader = new PacketReader(attrib))
                         {
-                            reader.ReadBytes(2); //conference flag
-                            uint count = reader.ReadUInt32(); //count of members
+                            reader.BaseStream.Position = i + 1;
+                            count = reader.ReadUInt32(); //count of members
                             confMembers = new uint[count];
-                            for (uint i = 0; i < count; i++) confMembers[i] = reader.ReadUInt32(); //read uin's
+                            for (uint j = 0; j < count; j++) confMembers[j] = reader.ReadUInt32(); //read uin's
                             reader.Close();
                         }
+                        i += (int)(1 + count * 4);
                     }
-                    catch { }
                 }
             }
+            catch { }
 
             Send(Packets.WriteReceiveAck(seq));
             OnMessageReceived(new MessageEventArgs(uin, time, plain, html, attrib, confMembers)); 

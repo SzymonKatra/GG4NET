@@ -70,7 +70,7 @@ namespace GG4NET
 		private const int STORED = 2; // processing stored block
 		private const int TABLE = 3; // get table lengths
 		private const int BTREE = 4; // get bit lengths tree for a dynamic block
-		private const int DTREE = 5; // get length, distance trees for a dynamic block
+		private const int DTREE = 5; // get structHeader, distance trees for a dynamic block
 		private const int CODES = 6; // processing fixed or dynamic block
 		private const int DRY = 7; // output remaining window bytes
 		private const int DONE = 8; // finished last block, done
@@ -83,8 +83,8 @@ namespace GG4NET
 		internal int table; // table lengths (14 bits) 
 		internal int index; // index into blens (or border) 
 		internal int[] blens; // bit lengths of codes 
-		internal int[] bb = new int[1]; // bit length tree depth 
-		internal int[] tb = new int[1]; // bit length decoding tree 
+		internal int[] bb = new int[1]; // bit structHeader tree depth 
+		internal int[] tb = new int[1]; // bit structHeader decoding tree 
 		
 		internal InfCodes codes; // if CODES, current state 
 		
@@ -192,7 +192,7 @@ namespace GG4NET
 								{
 									b = SupportClass.URShift(b, (t)); k -= (t);
 								}
-								mode = LENS; // get length of stored block
+								mode = LENS; // get structHeader of stored block
 								break;
 							
 							case 1:  // fixed

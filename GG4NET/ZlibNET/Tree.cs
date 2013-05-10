@@ -55,36 +55,36 @@ namespace GG4NET
 		private static readonly int L_CODES = (LITERALS + 1 + LENGTH_CODES);		
 		private static readonly int HEAP_SIZE = (2 * L_CODES + 1);
 		
-		// Bit length codes must not exceed MAX_BL_BITS bits
+		// Bit structHeader codes must not exceed MAX_BL_BITS bits
 		internal const int MAX_BL_BITS = 7;
 		
 		// end of block literal code
 		internal const int END_BLOCK = 256;
 		
-		// repeat previous bit length 3-6 times (2 bits of repeat count)
+		// repeat previous bit structHeader 3-6 times (2 bits of repeat count)
 		internal const int REP_3_6 = 16;
 		
-		// repeat a zero length 3-10 times  (3 bits of repeat count)
+		// repeat a zero structHeader 3-10 times  (3 bits of repeat count)
 		internal const int REPZ_3_10 = 17;
 		
-		// repeat a zero length 11-138 times  (7 bits of repeat count)
+		// repeat a zero structHeader 11-138 times  (7 bits of repeat count)
 		internal const int REPZ_11_138 = 18;
 		
-		// extra bits for each length code		
+		// extra bits for each structHeader code		
 		internal static readonly int[] extra_lbits = new int[]{0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0};
 		
 		// extra bits for each distance code		
 		internal static readonly int[] extra_dbits = new int[]{0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13};
 		
-		// extra bits for each bit length code		
+		// extra bits for each bit structHeader code		
 		internal static readonly int[] extra_blbits = new int[]{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 3, 7};
 				
 		internal static readonly byte[] bl_order = new byte[]{16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15};
 		
 		
-		// The lengths of the bit length codes are sent in order of decreasing
+		// The lengths of the bit structHeader codes are sent in order of decreasing
 		// probability, to avoid transmitting the lengths for unused bit
-		// length codes.
+		// structHeader codes.
 		
 		internal const int Buf_size = 8 * 2;
 		
@@ -112,13 +112,13 @@ namespace GG4NET
 		internal int max_code; // largest code with non zero frequency
 		internal StaticTree stat_desc; // the corresponding static tree
 		
-		// Compute the optimal bit lengths for a tree and update the total bit length
+		// Compute the optimal bit lengths for a tree and update the total bit structHeader
 		// for the current block.
 		// IN assertion: the fields freq and dad are set, heap[heap_max] and
 		//    above are the tree nodes sorted by increasing frequency.
-		// OUT assertions: the field len is set to the optimal bit length, the
-		//     array bl_count contains the frequencies for each bit length.
-		//     The length opt_len is updated; static_len is also updated if stree is
+		// OUT assertions: the field len is set to the optimal bit structHeader, the
+		//     array bl_count contains the frequencies for each bit structHeader.
+		//     The structHeader opt_len is updated; static_len is also updated if stree is
 		//     not null.
 		internal void  gen_bitlen(Deflate s)
 		{
@@ -129,16 +129,16 @@ namespace GG4NET
 			int max_length = stat_desc.max_length;
 			int h; // heap index
 			int n, m; // iterate over the tree elements
-			int bits; // bit length
+			int bits; // bit structHeader
 			int xbits; // extra bits
 			short f; // frequency
-			int overflow = 0; // number of elements with bit length too large
+			int overflow = 0; // number of elements with bit structHeader too large
 			
 			for (bits = 0; bits <= MAX_BITS; bits++)
 				s.bl_count[bits] = 0;
 			
 			// In a first pass, compute the optimal bit lengths (which may
-			// overflow in the case of the bit length tree).
+			// overflow in the case of the bit structHeader tree).
 			tree[s.heap[s.heap_max] * 2 + 1] = 0; // root of the heap
 			
 			for (h = s.heap_max + 1; h < HEAP_SIZE; h++)
@@ -168,7 +168,7 @@ namespace GG4NET
 				return ;
 			
 			// This happens for example on obj2 and pic of the Calgary corpus
-			// Find the first bit length which could increase:
+			// Find the first bit structHeader which could increase:
 			do 
 			{
 				bits = max_length - 1;
@@ -202,10 +202,10 @@ namespace GG4NET
 		}
 		
 		// Construct one Huffman tree and assigns the code bit strings and lengths.
-		// Update the total bit length for the current block.
+		// Update the total bit structHeader for the current block.
 		// IN assertion: the field freq is set for all tree elements.
-		// OUT assertions: the fields len and code are set to the optimal bit length
-		//     and corresponding code. The length opt_len is updated; static_len is
+		// OUT assertions: the fields len and code are set to the optimal bit structHeader
+		//     and corresponding code. The structHeader opt_len is updated; static_len is
 		//     also updated if stree is not null. The field max_code is set.
 		internal void  build_tree(Deflate s)
 		{
@@ -296,13 +296,13 @@ namespace GG4NET
 		
 		// Generate the codes for a given tree and bit counts (which need not be
 		// optimal).
-		// IN assertion: the array bl_count contains the bit length statistics for
+		// IN assertion: the array bl_count contains the bit structHeader statistics for
 		// the given tree and the field len is set for all tree elements.
 		// OUT assertion: the field code is set for all tree elements of non
-		//     zero code length.
+		//     zero code structHeader.
 		internal static void  gen_codes(short[] tree, int max_code, short[] bl_count)
 		{
-			short[] next_code = new short[MAX_BITS + 1]; // next code value for each bit length
+			short[] next_code = new short[MAX_BITS + 1]; // next code value for each bit structHeader
 			short code = 0; // running code value
 			int bits; // bit index
 			int n; // code index

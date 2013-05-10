@@ -148,7 +148,8 @@ namespace GG4NET
             _message = message;
             _htmlMessage = htmlMessage;
             _attributes = attributes;
-            _conferenceParticipants = (conferenceParticipants == null ? new uint[] { uin } : conferenceParticipants);
+            _conferenceParticipants = conferenceParticipants;
+            //_conferenceParticipants = (conferenceParticipants == null ? new uint[] { uin } : conferenceParticipants);
         }
         #endregion
     }

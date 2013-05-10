@@ -64,8 +64,8 @@ namespace GG4NET
 		//             "o:"=output,
 		//             "x:"=nothing
 		private const int START = 0; // x: set up for LEN
-		private const int LEN = 1; // i: get length/literal/eob next
-		private const int LENEXT = 2; // i: getting length extra (have base)
+		private const int LEN = 1; // i: get structHeader/literal/eob next
+		private const int LENEXT = 2; // i: getting structHeader extra (have base)
 		private const int DIST = 3; // i: get distance next
 		private const int DISTEXT = 4; // i: getting distance extra
 		private const int COPY = 5; // o: copying bytes in window, waiting for space
@@ -91,8 +91,8 @@ namespace GG4NET
 		
 		internal byte lbits; // ltree bits decoded per branch
 		internal byte dbits; // dtree bits decoder per branch
-		internal int[] ltree; // literal/length/eob tree
-		internal int ltree_index; // literal/length/eob tree
+		internal int[] ltree; // literal/structHeader/eob tree
+		internal int ltree_index; // literal/structHeader/eob tree
 		internal int[] dtree; // distance tree
 		internal int dtree_index; // distance tree
 		
@@ -168,7 +168,7 @@ namespace GG4NET
 						mode = LEN;
 						goto case LEN;
 					
-					case LEN:  // i: get length/literal/eob next
+					case LEN:  // i: get structHeader/literal/eob next
 						j = need;
 						
 						while (k < (j))
@@ -204,7 +204,7 @@ namespace GG4NET
 						}
 						if ((e & 16) != 0)
 						{
-							// length
+							// structHeader
 							get_Renamed = e & 15;
 							len = tree[tindex + 2];
 							mode = LENEXT;
@@ -233,7 +233,7 @@ namespace GG4NET
 						return s.inflate_flush(z, r);
 					
 					
-					case LENEXT:  // i: getting length extra (have base)
+					case LENEXT:  // i: getting structHeader extra (have base)
 						j = get_Renamed;
 						
 						while (k < (j))
@@ -475,8 +475,8 @@ namespace GG4NET
 		}
 		
 		// Called with number of bytes left to write in window at least 258
-		// (the maximum string length) and number of input bytes available
-		// at least ten.  The ten bytes are six bytes for the longest length/
+		// (the maximum string structHeader) and number of input bytes available
+		// at least ten.  The ten bytes are six bytes for the longest structHeader/
 		// distance pair plus four bytes for overloading the bit buffer.
 		
 		internal int inflate_fast(int bl, int bd, int[] tl, int tl_index, int[] td, int td_index, InfBlocks s, ZStream z)
@@ -491,7 +491,7 @@ namespace GG4NET
 			int n; // bytes available there
 			int q; // output window write pointer
 			int m; // bytes to end of window or read pointer
-			int ml; // mask for literal/length tree
+			int ml; // mask for literal/structHeader tree
 			int md; // mask for distance tree
 			int c; // bytes to copy
 			int d; // distance back to copy from
@@ -509,10 +509,10 @@ namespace GG4NET
 			do 
 			{
 				// assume called with m >= 258 && n >= 10
-				// get literal/length code
+				// get literal/structHeader code
 				while (k < (20))
 				{
-					// max bits for literal/length code
+					// max bits for literal/structHeader code
 					n--;
 					b |= (z.next_in[p++] & 0xff) << k; k += 8;
 				}

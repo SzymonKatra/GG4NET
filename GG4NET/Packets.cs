@@ -96,7 +96,7 @@ namespace GG4NET
         {
             using (PacketReader reader = new PacketReader(data))
             {
-                length = reader.ReadUInt16(); //type or length
+                length = reader.ReadUInt16(); //type or structHeader
                 type = (length >= 1 ? TypingNotifyType.Start : TypingNotifyType.Stop);
                 uin = reader.ReadUInt32(); //gg num
 
@@ -237,7 +237,14 @@ namespace GG4NET
                 writer.Write(Utils.CalculateSHA1Hash(password, passwordSeed)); //pass hash
                 writer.Write(Utils.ToInternalStatus(status, (description != string.Empty))); //status
                 writer.Write((uint)0); //flags
-                writer.Write(Container.GG_LOGIN_FLAG_MSGTYPE_80 | Container.GG_LOGIN_FLAG_STATUSTYPE_80 | Container.GG_LOGIN_FLAG_DNDFFC | Container.GG_LOGIN_FLAG_LOGINFAILEDTYPE | Container.GG_LOGIN_FLAG_UNKNOWN | Container.GG_LOGIN_FLAG_SENDMSGACK | Container.GG_LOGIN_FLAG_MULTILOGIN | Container.GG_LOGIN_FLAG_TYPINGNOTIF); //features
+                writer.Write(Container.GG_LOGIN_FLAG_MSGTYPE_80
+                    | Container.GG_LOGIN_FLAG_STATUSTYPE_80
+                    | Container.GG_LOGIN_FLAG_LOGINFAILEDTYPE
+                    | Container.GG_LOGIN_FLAG_UNKNOWN
+                    | Container.GG_LOGIN_FLAG_SENDMSGACK
+                    | Container.GG_LOGIN_FLAG_DNDFFC
+                    | Container.GG_LOGIN_FLAG_MULTILOGIN
+                    | Container.GG_LOGIN_FLAG_TYPINGNOTIF); //features
                 //writer.Write((uint)0x00000367);
                 writer.Write((uint)0); //local ip (not used)
                 writer.Write((ushort)0); //local port (not used)
@@ -246,10 +253,10 @@ namespace GG4NET
                 writer.Write((byte)255); //image size
                 writer.Write((byte)0x64); //unknown
 
-                writer.Write((uint)ver.Length); //version length string
+                writer.Write((uint)ver.Length); //version structHeader string
                 writer.Write(ver); //version
 
-                writer.Write((uint)desc.Length); //description length
+                writer.Write((uint)desc.Length); //description structHeader
                 if (description != string.Empty) writer.Write(desc); //description
 
                 return BuildHeader(Container.GG_LOGIN80, writer.Data);
@@ -304,26 +311,30 @@ namespace GG4NET
 
                 writer.Write(Utils.ToInternalStatus(status, (description != string.Empty))/* | Container.GG_STATUS_DESCR_MASK*/); //status
                 writer.Write(Container.GG_STATUS_FLAG_LINKS_FROM_UNKNOWN); //flags
-                writer.Write((uint)desc.Length); //description length
+                writer.Write((uint)desc.Length); //description structHeader
                 if (description != string.Empty) writer.Write(desc); //description
 
                 return BuildHeader(Container.GG_NEW_STATUS80, writer.Data);
             }
         }
-        public static byte[] WriteSendMessage(uint recipient, string plainMessage, string htmlMessage, byte[] attributes)
+        public static byte[] WriteSendMessage(uint recipient, string plainMessage, string htmlMessage, byte[] attributes, uint messageClass = Container.GG_CLASS_CHAT)
         {
             using (PacketWriter writer = new PacketWriter())
             {
                 writer.Write(recipient); //gg num
                 writer.Write((uint)(DateTime.Now - new DateTime(1970, 1, 1)).TotalSeconds); //sequence number = time from 1.1.1970
-                writer.Write(Container.GG_CLASS_CHAT); //message class
+                writer.Write(messageClass); //message class
                 byte[] html_msg = Encoding.UTF8.GetBytes(string.Format("{0}\0", htmlMessage));
                 byte[] plain_msg = Encoding.GetEncoding("windows-1250").GetBytes(string.Format("{0}\0", plainMessage));
                 writer.Write((uint)(html_msg.Length + 19)); //plain offset
                 writer.Write((uint)(html_msg.Length + plain_msg.Length + 20)); //attrib offset
                 writer.Write(html_msg); //html message
                 writer.Write(plain_msg); //plain message
-                if (attributes != null) writer.Write(attributes); //attributes
+                if (attributes != null)
+                {
+                    //writer.Write((byte)0);
+                    writer.Write(attributes); //attributes
+                }
 
                 return BuildHeader(Container.GG_SEND_MSG80, writer.Data);
             }
@@ -354,7 +365,7 @@ namespace GG4NET
         {
             using (PacketWriter writer = new PacketWriter())
             {
-                writer.Write((length >= 1 ? length : Utils.ToInternalTypingNotify(type))); //type or length
+                writer.Write((length >= 1 ? length : Utils.ToInternalTypingNotify(type))); //type or structHeader
                 writer.Write(uin); //gg num
 
                 return BuildHeader(Container.GG_TYPING_NOTIFY, writer.Data);
