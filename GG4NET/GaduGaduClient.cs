@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using System.Text;
+using System.IO;
 
 namespace GG4NET
 {
@@ -25,6 +27,7 @@ namespace GG4NET
         private System.Timers.Timer _pingTimer;
         private uint _lastContactListVersion = 0;
         private SynchronizationContext _syncContext = null;
+        private List<ImageData> _receivingImages;
         private bool _disposed = false;
 
         /// <summary>
@@ -114,6 +117,10 @@ namespace GG4NET
         public event EventHandler<XmlMessageEventArgs> XmlSystemMessageReceived = null;
         /// <summary>Wywołany gdy otrzymamy od serwera nową listę kontaktów.</summary>
         public event EventHandler<ContactListEventArgs> ContactListReceived = null;
+        /// <summary>Wywołany gdy otrzymamy obrazek.</summary>
+        public event EventHandler<ImageEventArgs> ImageReceived = null;
+        /// <summary>Wywołany gdy otrzymamy zapytanie o obrazek.</summary>
+        public event EventHandler<ImageEventArgs> ImageRequest = null;
         #endregion
 
         #region Constructors
@@ -227,6 +234,7 @@ namespace GG4NET
         {
             if (_isLogged)
             {
+                message.CloseMessage();
                 Send(Packets.WriteSendMessage(recipient, message.PlainMessage, message.HtmlMessage, message.Attributes));
             }
             else throw new NotLoggedException("You are not logged to GG network!");
@@ -241,6 +249,7 @@ namespace GG4NET
         {
             MessageBuilder builder = new MessageBuilder();
             builder.AppendText(message);
+            builder.CloseMessage();
             SendMessage(recipients, builder);
         }
         /// <summary>
@@ -252,6 +261,8 @@ namespace GG4NET
         {
             if (_isLogged)
             {
+                message.CloseMessage();
+
                 byte[] conferenceHeader = new byte[5];
                 conferenceHeader[0] = Container.GG_CONFERENCE_FLAG;
                 byte[] lenBytes = BitConverter.GetBytes((uint)recipients.Length - 1);
@@ -473,6 +484,108 @@ namespace GG4NET
             else throw new NotLoggedException("You are not logged to GG network!");
         }
         #endregion
+
+        #region Images
+        /// <summary>
+        /// Wyślij zapytanie o obrazek na podany numer.
+        /// </summary>
+        /// <param name="uin">Numer GG.</param>
+        /// <param name="hash">Hash obrazka.</param>
+        public void SendImageRequest(uint uin, string hash)
+        {
+            uint crc32;
+            uint len;
+            Utils.ParseImageHash(hash, out crc32, out len);
+            SendImageRequest(uin, crc32, len);
+        }
+        /// <summary>
+        /// Wyślij zapytanie o obrazek na podany numer.
+        /// </summary>
+        /// <param name="uin">Numer GG.</param>
+        /// <param name="crc32">Suma kontrolna CRC32 obrazka.</param>
+        /// <param name="length">Wielkość obrazka w bajtach.</param>
+        public void SendImageRequest(uint uin, uint crc32, uint length)
+        {
+            using (PacketWriter writer = new PacketWriter())
+            {
+                writer.Write((byte)Container.GG_IMAGE_REQUEST_FLAG);
+                writer.Write(length);
+                writer.Write(crc32);
+
+                Send(Packets.WriteSendMessage(uin, string.Empty, string.Empty, writer.Data, Container.GG_CLASS_CHAT));
+
+                writer.Close();
+            }
+        }
+
+        /// <summary>
+        /// Wyślij odpowiedź na zapytanie o obrazek.
+        /// </summary>
+        /// <param name="uin">Numer GG.</param>
+        /// <param name="crc32">Suma kontrolna CRC32 obrazka.</param>
+        /// <param name="length">Wielkość obrazka w bajtach.</param>
+        /// <param name="filePath">Ścieżka do pliku z obrazkiem</param>
+        public void SendImageResponse(uint uin, uint crc32, uint length, string filePath)
+        {
+            SendImageResponse(uin, crc32, length, new FileStream(filePath, FileMode.Open), Path.GetFileName(filePath));
+        }
+        /// <summary>
+        /// Wyślij odpowiedź na zapytanie o obrazek.
+        /// </summary>
+        /// <param name="uin">Numer GG.</param>
+        /// <param name="crc32">Suma kontrolna CRC32 obrazka.</param>
+        /// <param name="length">Wielkość obrazka w bajtach.</param>
+        /// <param name="image">Dane obrazka.</param>
+        /// <param name="fileName">Nazwa pliku</param>
+        public void SendImageResponse(uint uin, uint crc32, uint length, byte[] image, string fileName)
+        {
+            SendImageResponse(uin, crc32,length,new MemoryStream(image),fileName);
+        }
+        /// <summary>
+        /// Wyślij odpowiedź na zapytanie o obrazek.
+        /// </summary>
+        /// <param name="uin">Numer GG.</param>
+        /// <param name="crc32">Suma kontrolna CRC32 obrazka.</param>
+        /// <param name="length">Wielkość obrazka w bajtach.</param>
+        /// <param name="imageStream">Strumień obrazka.</param>
+        /// <param name="fileName">Nazwa pliku</param>
+        public void SendImageResponse(uint uin, uint crc32, uint length, Stream imageStream, string fileName)
+        {
+            bool headerSent = false;
+            byte[] fName = null;
+            if (!string.IsNullOrEmpty(fileName)) fName = Encoding.UTF8.GetBytes(fileName);
+            int shouldRead = Container.GG_IMAGE_REPLY_MESSAGE_MAX_SIZE - (1 + 4 + 4 + fName.Length); //flag + size + crc32 + file name length
+            byte[] buffer = new byte[shouldRead];
+            int len;
+
+            while ((len = imageStream.Read(buffer, 0, buffer.Length)) > 0)
+            {
+                using (PacketWriter writer = new PacketWriter())
+                {
+                    if (!headerSent)
+                    {
+                        writer.Write(Container.GG_IMAGE_RESPONSE_FLAG);
+                    }
+                    else writer.Write(Container.GG_IMAGE_RESPONSE_FLAG_MORE_DATA);
+
+                    writer.Write(length);
+                    writer.Write(crc32);
+                    if (!headerSent && fName != null) writer.Write(fName);
+                    writer.Write(buffer, 0, len);
+
+                    Send(Packets.WriteSendMessage(uin, string.Empty, string.Empty, writer.Data));
+
+                    headerSent = true;
+                    writer.Close();
+                }
+
+                if (headerSent) shouldRead = Container.GG_IMAGE_REPLY_MESSAGE_MAX_SIZE - (1 + 4 + 4); //flag + size + crc32
+                if (shouldRead != buffer.Length) Array.Resize(ref buffer, shouldRead);
+            }
+
+            imageStream.Close();
+        }
+        #endregion
         #endregion
 
         #region Other
@@ -534,14 +647,14 @@ namespace GG4NET
         }
         private void CloseSocket()
         {
+            if (_pingTimer != null) _pingTimer.Stop();
             try
             {
                 _isLogged = false;
                 _socket.Close();
                 _socket = null;
             }
-            catch { }
-            if (_pingTimer != null) _pingTimer.Stop();
+            catch { }         
         }
         #endregion
 
@@ -584,6 +697,8 @@ namespace GG4NET
 
             _isLogged = true;
 
+            _receivingImages = new List<ImageData>();
+
             OnLogged();
         }
         /// <summary>
@@ -609,30 +724,12 @@ namespace GG4NET
             byte[] attrib;
             Packets.ReadReceiveMessage(data, out uin, out seq, out time, out plain, out html, out attrib);
 
-            uint[] confMembers = null;
-            uint count = 0;
-            try
-            {
-                for (int i = 0; i < attrib.Length; i++)
-                {
-                    if (attrib[i] == Container.GG_CONFERENCE_FLAG)
-                    {
-                        using (PacketReader reader = new PacketReader(attrib))
-                        {
-                            reader.BaseStream.Position = i + 1;
-                            count = reader.ReadUInt32(); //count of members
-                            confMembers = new uint[count];
-                            for (uint j = 0; j < count; j++) confMembers[j] = reader.ReadUInt32(); //read uin's
-                            reader.Close();
-                        }
-                        i += (int)(1 + count * 4);
-                    }
-                }
-            }
-            catch { }
+            uint[] confMembers;
+            bool isImage;
+            ParseAttributes(uin, attrib, out isImage, out confMembers);
 
             Send(Packets.WriteReceiveAck(seq));
-            OnMessageReceived(new MessageEventArgs(uin, time, plain, html, attrib, confMembers)); 
+            if (!isImage) OnMessageReceived(new MessageEventArgs(uin, time, plain, html, attrib, confMembers)); ;
         }
         /// <summary>
         /// Przetwórz pakiet o wysłanej wiadomości z innego klienta zalogowanego na nasz numer.
@@ -648,8 +745,12 @@ namespace GG4NET
             byte[] attrib;
             Packets.ReadReceiveMessage(data, out uin, out seq, out time, out plain, out html, out attrib);
 
+            uint[] confMembers;
+            bool isImage;
+            ParseAttributes(uin, attrib, out isImage, out confMembers);
+
             Send(Packets.WriteReceiveAck(seq));
-            OnOwnMessageReceived(new MessageEventArgs(uin, time, plain, html, attrib));
+            if (!isImage) OnOwnMessageReceived(new MessageEventArgs(uin, time, plain, html, attrib, confMembers));
         }
         /// <summary>
         /// Przetwórz pakiet o zmianie statusu osoby z listy kontaktów.
@@ -775,6 +876,183 @@ namespace GG4NET
         {
             Packets.ReadUserListVersion(data, out _lastContactListVersion);
             OnContactListReceived(new ContactListEventArgs(null, _lastContactListVersion));
+        }
+
+        private void ParseAttributes(uint uin, byte[] attributes, out bool isImage, out uint[] conferenceMembers)
+        {
+            conferenceMembers = null;
+            isImage = false;
+
+            if (attributes != null || attributes.Length > 0)
+            {
+                int currentOffset = 0;
+                if (currentOffset < attributes.Length)
+                {
+                    if (attributes[currentOffset] == Container.GG_IMAGE_RESPONSE_FLAG || attributes[currentOffset] == Container.GG_IMAGE_RESPONSE_FLAG_MORE_DATA)
+                    {
+                        byte currentFlag = attributes[currentOffset];
+                        try
+                        {
+                            ImageData receivedImage = new ImageData();
+                            //ReadImage(attrib, currentOffset, out currentOffset, out crc32, out len, out fileName, out imgData);
+                            ReadImage(attributes, currentOffset, out currentOffset, out receivedImage.Crc32, out receivedImage.Length, out receivedImage.FileName, out receivedImage.Data);
+
+                            if (currentFlag == Container.GG_IMAGE_RESPONSE_FLAG_MORE_DATA)
+                            {
+                                int index = _receivingImages.FindIndex(x => x.Crc32 == receivedImage.Crc32 && x.Length == receivedImage.Length);
+                                ImageData imgStruct = _receivingImages[index];
+                                Array.Resize(ref imgStruct.Data, imgStruct.Data.Length + receivedImage.Data.Length);
+                                Buffer.BlockCopy(receivedImage.Data, 0, imgStruct.Data, imgStruct.Data.Length - receivedImage.Data.Length, receivedImage.Data.Length);
+                                if (attributes.Length >= Container.GG_IMAGE_REPLY_MESSAGE_MAX_SIZE)
+                                {
+                                    _receivingImages[index] = imgStruct;
+                                }
+                                else
+                                {
+                                    _receivingImages.RemoveAt(index);
+                                    OnImageReceived(new ImageEventArgs(imgStruct, uin));
+                                }
+                            }
+                            else if (currentFlag == Container.GG_IMAGE_RESPONSE_FLAG)
+                            {
+                                if (attributes.Length >= Container.GG_IMAGE_REPLY_MESSAGE_MAX_SIZE)
+                                {
+                                    _receivingImages.Add(receivedImage);
+                                }
+                                else
+                                {
+                                    OnImageReceived(new ImageEventArgs(receivedImage, uin));
+                                }
+                            }
+                        }
+                        catch { }
+
+                        isImage = true;
+                    }
+                    else if (attributes[currentOffset] == Container.GG_IMAGE_REQUEST_FLAG)
+                    {
+                        ImageData imgReq = new ImageData();
+                        ReadImageRequest(attributes, currentOffset, out currentOffset, out imgReq.Crc32, out imgReq.Length);
+                        OnImageRequest(new ImageEventArgs(imgReq, uin));
+
+                        isImage = true;
+                    }
+                    else  if (attributes[currentOffset] == Container.GG_CONFERENCE_FLAG)
+                    {
+                        conferenceMembers = ReadConference(attributes, currentOffset, out currentOffset);
+                    }
+                    else if (attributes[currentOffset] == Container.GG_ATTRIBUTES_FLAG)
+                    {
+                        //TODO: text attributes parse
+                    }
+                }
+            }
+
+            if (conferenceMembers == null) conferenceMembers = new uint[0];
+        }
+        /// <summary>
+        /// Odczytuje informacje o konferencji z atrybutów.
+        /// </summary>
+        /// <param name="attributes">Atrybuty</param>
+        /// <param name="offset">Offset od którego rozpocząć czytanie</param>
+        /// <param name="newOffset">Nowy offset</param>
+        /// <returns>Uczestnicy konferencji</returns>
+        protected uint[] ReadConference(byte[] attributes, int offset, out int newOffset)
+        {
+            uint[] conferenceMembers = null;
+            uint count = 0;
+            newOffset = offset;
+            try
+            {
+                //for (int i = 0; i < attributes.Length; i++)
+                //{
+                    //if (attributes[i] == Container.GG_CONFERENCE_FLAG)
+                    //{
+                        using (PacketReader reader = new PacketReader(attributes))
+                        {
+                            reader.BaseStream.Position = offset + 1; // +1 because we bypass flag // i + 1;
+
+                            count = reader.ReadUInt32(); //count of members
+                            conferenceMembers = new uint[count];
+                            for (uint j = 0; j < count; j++) conferenceMembers[j] = reader.ReadUInt32(); //read uin's
+                            newOffset = (int)reader.BaseStream.Position;
+                            reader.Close();
+                        }
+                    //    i += (int)(1 + count * 4);
+                    //}
+                //}
+            }
+            catch { }
+            //if (conferenceMembers == null) conferenceMembers = new uint[0];
+            return conferenceMembers;
+        }
+        /// <summary>
+        /// Odczytuje informacje o obrazku z atrybutów.
+        /// </summary>
+        /// <param name="attributes">Atrybuty</param>
+        /// <param name="offset">Offset</param>
+        /// <param name="newOffset">Nowy offset</param>
+        /// <param name="crc32">Suma kontrolna CRC32</param>
+        /// <param name="length">Wielkość obrazka w bajtach</param>
+        /// <param name="fileName">Nazwa pliku obrazka</param>
+        /// <param name="imageData">Dane obrazka</param>
+        protected void ReadImage(byte[] attributes, int offset, out int newOffset, out uint crc32, out uint length, out string fileName, out byte[] imageData)
+        {
+            newOffset = offset;
+            crc32 = 0;
+            length = 0;
+            fileName = string.Empty;
+            imageData = null;
+            using (PacketReader reader = new PacketReader(attributes))
+            {
+                reader.BaseStream.Position = offset;
+                byte flag = reader.ReadByte();
+                length = reader.ReadUInt32();
+                crc32 = reader.ReadUInt32();
+                if (flag != Container.GG_IMAGE_RESPONSE_FLAG_MORE_DATA)
+                {
+                    int endOfFileName = -1;
+                    for (int i = offset; i < attributes.Length; ++i)
+                    {
+                        if (attributes[i] == 0)
+                        {
+                            endOfFileName = i;
+                            break;
+                        }
+                    }
+                    byte[] fName = reader.ReadBytes(endOfFileName - offset);
+                    fileName = Encoding.UTF8.GetString(fName);
+                }
+                imageData = reader.ReadBytes((int)(reader.BaseStream.Length - reader.BaseStream.Position));
+                newOffset = (int)reader.BaseStream.Position;
+                reader.Close();
+            }
+        }
+        /// <summary>
+        /// Odczytaj informacje o zapytaniu o obrazek.
+        /// </summary>
+        /// <param name="attributes">Atrybuty</param>
+        /// <param name="offset">Offset</param>
+        /// <param name="newOffset">Nowy offset</param>
+        /// <param name="crc32">Suma kontrolna CRC32</param>
+        /// <param name="length">Wielkość obrazka w bajtach</param>
+        protected void ReadImageRequest(byte[] attributes, int offset, out int newOffset, out uint crc32, out uint length)
+        {
+            newOffset = offset;
+            crc32 = 0;
+            length = 0;
+            try
+            {
+                using (PacketReader reader = new PacketReader(attributes))
+                {
+                    reader.BaseStream.Position = offset + 1;
+                    length = reader.ReadUInt32();
+                    crc32 = reader.ReadUInt32();
+                    newOffset = (int)reader.BaseStream.Position;
+                    reader.Close();
+                }
+            }
+            catch { }
         }
         #endregion
 
@@ -937,6 +1215,18 @@ namespace GG4NET
         {
             RaiseEvent(ContactListReceived, e);
         }
+        /// <summary>Wywołuje zdarzenie ImageReceived.</summary>
+        /// <param name="e">Parametry</param>
+        protected virtual void OnImageReceived(ImageEventArgs e)
+        {
+            RaiseEvent(ImageReceived, e);
+        }
+        /// <summary>Wywołuje zdarzenie ImageRequest.</summary>
+        /// <param name="e">Parametry</param>
+        protected virtual void OnImageRequest(ImageEventArgs e)
+        {
+            RaiseEvent(ImageRequest, e);
+        }
 
         /// <summary>
         /// Synchronizuje zdarzenia wywoływane na różnych wątkach.
@@ -993,6 +1283,8 @@ namespace GG4NET
                 if (disposing)
                 {
                     //managed
+                    _pingTimer.Dispose();
+                    _pingTimer = null;
                     CloseSocket();
                     _buffer = null;
                     _uin = 0;
@@ -1003,9 +1295,8 @@ namespace GG4NET
                     _serverEp = null;
                     _socket = null;
                     _receiver = null;
-                    _isLogged = false;
-                    _pingTimer.Dispose();
-                    _pingTimer = null;
+                    _receivingImages = null;
+                    _isLogged = false;  
                 }
 
                 //unmanaged

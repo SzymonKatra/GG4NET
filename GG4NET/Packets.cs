@@ -19,6 +19,8 @@ namespace GG4NET
         }
         public static void ReadReceiveMessage(byte[] data, out uint uin, out uint seq, out DateTime time, out string plainMessage, out string htmlMessage, out byte[] attributes)
         {
+            htmlMessage = string.Empty;
+            plainMessage = string.Empty;
             using (PacketReader reader = new PacketReader(data))
             {
                 uin = reader.ReadUInt32(); //gg num
@@ -28,8 +30,12 @@ namespace GG4NET
                 reader.ReadUInt32(); // message class
                 uint plain_offset = reader.ReadUInt32(); //plain offset
                 uint attrib_offset = reader.ReadUInt32(); //attributes offset
-                htmlMessage = Encoding.UTF8.GetString(reader.ReadBytes((int)(plain_offset - 25))); //read html message
-                plainMessage = Encoding.GetEncoding("windows-1250").GetString(reader.ReadBytes((int)(attrib_offset - plain_offset))); //read plain message
+                if (attrib_offset != plain_offset + 1) //if no image
+                {
+                    htmlMessage = Encoding.UTF8.GetString(reader.ReadBytes((int)(plain_offset - 25))); //read html message
+                    plainMessage = Encoding.GetEncoding("windows-1250").GetString(reader.ReadBytes((int)(attrib_offset - plain_offset))); //read plain message
+                }
+                reader.ReadByte(); //probably /0 char of plain message
                 attributes = reader.ReadBytes((int)(data.Length - reader.BaseStream.Position)); //attributes
 
                 reader.Close();
@@ -234,7 +240,7 @@ namespace GG4NET
                 writer.Write(uin); //gg num
                 writer.Write('p'); writer.Write('l'); //language
                 writer.Write(Container.GG_LOGIN_HASH_SHA1); //hash type
-                writer.Write(Utils.CalculateSHA1Hash(password, passwordSeed)); //pass hash
+                writer.Write(Utils.ComputeSHA1(password, passwordSeed)); //pass hash
                 writer.Write(Utils.ToInternalStatus(status, (description != string.Empty))); //status
                 writer.Write((uint)0); //flags
                 writer.Write(Container.GG_LOGIN_FLAG_MSGTYPE_80
@@ -329,6 +335,7 @@ namespace GG4NET
                 writer.Write((uint)(html_msg.Length + 19)); //plain offset
                 writer.Write((uint)(html_msg.Length + plain_msg.Length + 20)); //attrib offset
                 writer.Write(html_msg); //html message
+                //if (string.IsNullOrEmpty(plainMessage) && imageSending) writer.Write(160); else
                 writer.Write(plain_msg); //plain message
                 if (attributes != null)
                 {

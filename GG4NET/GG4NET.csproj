@@ -44,6 +44,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ContactList.cs" />
+    <Compile Include="ImageData.cs" />
     <Compile Include="MessageBuilder.cs" />
     <Compile Include="UserInfo.cs" />
     <Compile Include="Container.cs" />

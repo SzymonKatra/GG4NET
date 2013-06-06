@@ -131,5 +131,6 @@ namespace GG4NET
         public const byte GG_IMAGE_REQUEST_FLAG = 0x04;
         public const byte GG_IMAGE_RESPONSE_FLAG = 0x05;
         public const byte GG_IMAGE_RESPONSE_FLAG_MORE_DATA = 0x05;
+        public const int GG_IMAGE_REPLY_MESSAGE_MAX_SIZE = 1909;
     }
 }

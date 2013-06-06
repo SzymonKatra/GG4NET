@@ -433,4 +433,51 @@ namespace GG4NET
             _version = version;
         }
     }
+
+    /// <summary>
+    /// Argumenty dla obrazka.
+    /// </summary>
+    public class ImageEventArgs : EventArgs
+    {
+        #region Properties
+        private ImageData _image;
+        private uint _uin;
+
+        /// <summary>
+        /// Obrazek.
+        /// </summary>
+        public ImageData Image
+        {
+            get { return _image; }
+            set { _image = value; }
+        }
+        /// <summary>
+        /// Numer GG nadawcy obrazka/zapytania o obrazek.
+        /// </summary>
+        public uint Uin
+        {
+            get { return _uin; }
+            set { _uin = value; }
+        }
+        #endregion
+
+        #region Constructors
+        /// <summary>
+        /// Stwórz argumenty dla obrazka.
+        /// </summary>
+        public ImageEventArgs()
+        {
+        }
+        /// <summary>
+        /// Stwórz argumenty dla obrazka.
+        /// </summary>
+        /// <param name="image">Obrazek.</param>
+        /// <param name="uin">Numer GG.</param>
+        public ImageEventArgs(ImageData image, uint uin)
+        {
+            _image = image;
+            _uin = uin;
+        }
+        #endregion
+    }
 }

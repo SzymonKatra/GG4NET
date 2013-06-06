@@ -11,10 +11,55 @@ namespace GG4NET
     /// </summary>
     public class MessageBuilder
     {
+        private class Crc32
+        {
+            private static uint[] table;
+
+            public static uint ComputeChecksum(byte[] bytes)
+            {
+                uint crc = 0xffffffff;
+                for (int i = 0; i < bytes.Length; ++i)
+                {
+                    byte index = (byte)(((crc) & 0xff) ^ bytes[i]);
+                    crc = (uint)((crc >> 8) ^ table[index]);
+                }
+                return ~crc;
+            }
+
+            public static byte[] ComputeChecksumBytes(byte[] bytes)
+            {
+                return BitConverter.GetBytes(ComputeChecksum(bytes));
+            }
+
+            static Crc32()
+            {
+                uint poly = 0xedb88320;
+                table = new uint[256];
+                uint temp = 0;
+                for (uint i = 0; i < table.Length; ++i)
+                {
+                    temp = i;
+                    for (int j = 8; j > 0; --j)
+                    {
+                        if ((temp & 1) == 1)
+                        {
+                            temp = (uint)((temp >> 1) ^ poly);
+                        }
+                        else
+                        {
+                            temp >>= 1;
+                        }
+                    }
+                    table[i] = temp;
+                }
+            }
+        }
+
         #region Properties
         private string _plainMessage = string.Empty;
         private string _htmlMessage = string.Empty;
         private byte[] _attributes = null;
+        private bool _haveImage = false;
 
         /// <summary>
         /// Wiadomość zapisana czystym tekstem.
@@ -159,26 +204,21 @@ namespace GG4NET
 
         /// <summary>
         /// Dodaj obrazek do wiadomości.
-        /// Obrazek musi być najpierw wysłany na serwer.
         /// </summary>
         /// <param name="hash">Hash obrazka</param>
         public void AppendImage(string hash)
         {
-            try
-            {
-                if (hash.Length != 16) throw new InvalidOperationException("Bad hash length");
-
-                AppendImage(Convert.ToInt64(hash.Remove(8), 16), Convert.ToInt64(hash.Remove(0, 8), 16));
-            }
-            catch { throw new InvalidOperationException("Bad hash"); }
+            uint crc32;
+            uint len;
+            Utils.ParseImageHash(hash, out crc32, out len);
+            AppendImage(crc32, len);
         }
         /// <summary>
         /// Dodaj obrazek do wiadomości.
-        /// Obrazek musi być najpierw wysłany na serwer.
         /// </summary>
         /// <param name="crc32">Suma kontrolna CRC32.</param>
         /// <param name="length">Wielkość obrazka w bajtach.</param>
-        public void AppendImage(long crc32, long length)
+        public void AppendImage(uint crc32, uint length)
         {
             #region Html
             //open html message if closed
@@ -220,6 +260,17 @@ namespace GG4NET
                 Buffer.BlockCopy(newData, 0, _attributes, _attributes.Length - newData.Length, newData.Length);
             }
             #endregion
+
+            _haveImage = true;
+        }
+
+        internal void CloseMessage()
+        {
+            if (!_htmlMessage.EndsWith("</span>") && !string.IsNullOrEmpty(_htmlMessage))
+            {
+                _htmlMessage += "</span>";
+            }
+            if (string.IsNullOrEmpty(_plainMessage) && _haveImage) _plainMessage += (char)160;
         }
         #endregion
     }

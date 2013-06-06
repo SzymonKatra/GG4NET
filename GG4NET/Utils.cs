@@ -52,12 +52,13 @@ namespace GG4NET
                 }
             }
         }
+
         /// <summary>
         /// Oblicza sumę kontrolną CRC32 z podanych danych.
         /// </summary>
         /// <param name="data">Dane.</param>
         /// <returns>Suma kontrolna CRC32.</returns>
-        public static long ComputeCrc32(byte[] data)
+        public static uint ComputeCrc32(byte[] data)
         {
             return Crc32.ComputeChecksum(data);
         }
@@ -67,12 +68,31 @@ namespace GG4NET
         /// <param name="crc32">Suma kontrolna CRC32.</param>
         /// <param name="length">Wielkość obrazka w bajtach.</param>
         /// <returns>Hash obrazka.</returns>
-        public static string ComputeHash(long crc32, long length)
+        public static string ComputeHash(uint crc32, uint length)
         {
             return crc32.ToString("X8") + length.ToString("X8");
         }
+        /// <summary>
+        /// Parsuj hash obrazka.
+        /// </summary>
+        /// <param name="hash">Hash.</param>
+        /// <param name="crc32">Suma kontrolna CRC32.</param>
+        /// <param name="length">Wielkość obrazka w bajtach.</param>
+        public static void ParseImageHash(string hash, out uint crc32, out uint length)
+        {
+            crc32 = 0;
+            length = 0;
+            try
+            {
+                if (hash.Length != 16) throw new InvalidOperationException("Bad hash length");
 
-        internal static byte[] CalculateSHA1Hash(string password, uint seed)
+                crc32 = Convert.ToUInt32(hash.Remove(8), 16);
+                length = Convert.ToUInt32(hash.Remove(0, 8), 16);
+            }
+            catch { throw new InvalidOperationException("Bad hash"); }
+        }
+
+        internal static byte[] ComputeSHA1(string password, uint seed)
         {
             SHA1 sha = SHA1.Create();
             byte[] hash = new byte[64];
