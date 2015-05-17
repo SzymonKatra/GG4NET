@@ -1,13 +1,13 @@
 Copyright (c) 2013 Szymon Katra
-Ten produkt jest udostêpniony 'jak-jest', bez ¿adnych gwarancji, wyraŸnych lub dorozumianuch. W ¿adnym przypadku autorzy nie bêd¹ ponosiæ odpowiedzialnoœci za jakiekolwiek szkody wynikaj¹ce z korzystania z tego oprogramowania.
+Ten produkt jest udostÄ™pniony 'jak-jest', bez Å¼adnych gwarancji, wyraÅºnych lub dorozumianuch. W Å¼adnym przypadku autorzy nie bÄ™dÄ… ponosiÄ‡ odpowiedzialnoÅ›ci za jakiekolwiek szkody wynikajÄ…ce z korzystania z tego oprogramowania.
 
-Udziela siê zgody ka¿demu do korzystania z tego oprogramowania do jakichkolwiek celów, w tym komercyjnych, zmiany go i rozpowszechniania go za darmo, z zastrze¿eniem nastêpuj¹cych ograniczeñ:
+Udziela siÄ™ zgody kaÅ¼demu do korzystania z tego oprogramowania do jakichkolwiek celÃ³w, w tym komercyjnych, zmiany go i rozpowszechniania go za darmo, z zastrzeÅ¼eniem nastÄ™pujÄ…cych ograniczeÅ„:
 
-1. Pochodzenie tego oprogramowania nie mo¿e byæ nieprawdziwe, nie wolno twierdziæ, ¿e jest siê autorem oryginalnego oprogramowania. W przypadku korzystania z tego oprogramowania w produkcie, potwierdzenie w dokumentacji produktu bêdzie mile widziane, ale nie jest wymagane.
+1. Pochodzenie tego oprogramowania nie moÅ¼e byÄ‡ nieprawdziwe, nie wolno twierdziÄ‡, Å¼e jest siÄ™ autorem oryginalnego oprogramowania. W przypadku korzystania z tego oprogramowania w produkcie, potwierdzenie w dokumentacji produktu bÄ™dzie mile widziane, ale nie jest wymagane.
 
-2. Zmienione wersje Ÿród³owe musz¹ byæ wyraŸnie oznaczone jako takie, i nie mo¿e byæ podawane jako oryginalne oprogramowanie.
+2. Zmienione wersje ÅºrÃ³dÅ‚owe muszÄ… byÄ‡ wyraÅºnie oznaczone jako takie, i nie mogÄ… byÄ‡ podawane jako oryginalne oprogramowanie.
 
-3. Informacja ta nie mo¿e byæ usuniêta lub zmieniona we wszelkich formach dystrybucji Ÿród³owej.
+3. Informacja ta nie moÅ¼e byÄ‡ usuniÄ™ta lub zmieniona we wszelkich formach dystrybucji ÅºrÃ³dÅ‚owej.
 
 
 Copyright (c) 2013 Szymon Katra
