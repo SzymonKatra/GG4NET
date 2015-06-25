@@ -613,41 +613,37 @@ namespace GG4NET
         }
         private void _receiver_PacketArrived(object sender, PacketReceiverMessage e)
         {
-            try
+            switch (e.PacketType)
             {
-                switch (e.PacketType)
-                {
-                    case Container.GG_WELCOME: ProcessWelcome(e.Data); break;
+                case Container.GG_WELCOME: ProcessWelcome(e.Data); break;
 
-                    case Container.GG_LOGIN80_OK: ProcessLoginOk(e.Data); break;
+                case Container.GG_LOGIN80_OK: ProcessLoginOk(e.Data); break;
 
-                    case Container.GG_LOGIN80_FAILED: ProcessLoginFailed(e.Data); break;
+                case Container.GG_LOGIN80_FAILED: ProcessLoginFailed(e.Data); break;
 
-                    case Container.GG_RECV_MSG80: ProcessReceiveMessage(e.Data); break;
+                case Container.GG_RECV_MSG80: ProcessReceiveMessage(e.Data); break;
 
-                    case Container.GG_RECV_OWN_MSG: ProcessReceiveOwnMessage(e.Data); break;
+                case Container.GG_RECV_OWN_MSG: ProcessReceiveOwnMessage(e.Data); break;
 
-                    case Container.GG_NOTIFY_REPLY80:
-                    case Container.GG_STATUS80: ProcessNotifyReply(e.Data); break;
+                case Container.GG_NOTIFY_REPLY80:
+                case Container.GG_STATUS80: ProcessNotifyReply(e.Data); break;
 
-                    case Container.GG_NEED_EMAIL: ProcessNeedEmail(e.Data); break;
+                case Container.GG_NEED_EMAIL: ProcessNeedEmail(e.Data); break;
 
-                    case Container.GG_MULTILOGON_INFO: ProcessMultilogonInfo(e.Data); break;
+                case Container.GG_MULTILOGON_INFO: ProcessMultilogonInfo(e.Data); break;
 
-                    case Container.GG_TYPING_NOTIFY: ProcessTypingNotify(e.Data); break;
+                case Container.GG_TYPING_NOTIFY: ProcessTypingNotify(e.Data); break;
 
-                    case Container.GG_PUBDIR50_REPLY: ProcessPublicDirectoryReply(e.Data); break;
+                case Container.GG_PUBDIR50_REPLY: ProcessPublicDirectoryReply(e.Data); break;
 
-                    case Container.GG_XML_ACTION: ProcessXmlGGLiveMessage(e.Data); break;
+                case Container.GG_XML_ACTION: ProcessXmlGGLiveMessage(e.Data); break;
 
-                    case Container.GG_XML_EVENT: ProcessXmlSystemMessage(e.Data); break;
+                case Container.GG_XML_EVENT: ProcessXmlSystemMessage(e.Data); break;
 
-                    case Container.GG_USERLIST100_REPLY: ProcessUserListReply(e.Data); break;
+                case Container.GG_USERLIST100_REPLY: ProcessUserListReply(e.Data); break;
 
-                    case Container.GG_USERLIST100_VERSION: ProcessUserListVersion(e.Data); break;
-                }
+                case Container.GG_USERLIST100_VERSION: ProcessUserListVersion(e.Data); break;
             }
-            catch { }
         }
         private void CloseSocket()
         {
