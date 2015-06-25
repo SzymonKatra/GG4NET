@@ -1,9 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Express 2012 for Windows Desktop
+# Visual Studio 2013
+VisualStudioVersion = 12.0.31101.0
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GG4NET", "GG4NET\GG4NET.csproj", "{62478E46-030B-46BC-AF11-7CBC90D6A899}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "test", "test\test.csproj", "{81793382-BE39-4A27-8ED3-FC251F609718}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GG4NETExample", "GG4NETExample\GG4NETExample.csproj", "{E9DCC869-DFF5-481B-AE4D-A18BFD54772D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,10 +17,10 @@ Global
 		{62478E46-030B-46BC-AF11-7CBC90D6A899}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{62478E46-030B-46BC-AF11-7CBC90D6A899}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{62478E46-030B-46BC-AF11-7CBC90D6A899}.Release|Any CPU.Build.0 = Release|Any CPU
-		{81793382-BE39-4A27-8ED3-FC251F609718}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{81793382-BE39-4A27-8ED3-FC251F609718}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{81793382-BE39-4A27-8ED3-FC251F609718}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{81793382-BE39-4A27-8ED3-FC251F609718}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E9DCC869-DFF5-481B-AE4D-A18BFD54772D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E9DCC869-DFF5-481B-AE4D-A18BFD54772D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E9DCC869-DFF5-481B-AE4D-A18BFD54772D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E9DCC869-DFF5-481B-AE4D-A18BFD54772D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
