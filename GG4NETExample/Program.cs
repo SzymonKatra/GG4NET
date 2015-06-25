@@ -31,8 +31,6 @@ namespace GG4NETExample
 
             client.Connect();
 
-            while (!client.IsLogged) ; // oczekiwanie na zalogowanie
-
             uint lastUin = 0;
             while (true)
             {
