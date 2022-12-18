@@ -1,9 +1,28 @@
 ﻿GG4NET
 ======
 
-Biblioteka do obsługi Gadu-Gadu dla .NET bazowana na specyfikacji libgadu (http://libgadu.net/protocol/).
+.NET [Gadu-Gadu](https://en.wikipedia.org/wiki/Gadu-Gadu) library based on libgadu specification (http://libgadu.net/protocol/).
 
-Licencja: [MIT](https://github.com/SzymonKatra/GG4NET/blob/master/license.txt)
+License: [MIT](license.txt)
+
+Features:
+* logging in
+* status changing
+* sending messages
+* receiving messages
+* typing notify
+* status change notify of contacts
+* public directory
+* multilogin
+* import / export contacts list to file / server in old format (CSV) and new (XML)
+* HTTP services (downloading image token, registration, password change, password remind)
+* conferences
+
+----------
+
+Biblioteka do obsługi [Gadu-Gadu](https://pl.wikipedia.org/wiki/GG_(komunikator_internetowy)) dla .NET bazowana na specyfikacji libgadu (http://libgadu.net/protocol/).
+
+Licencja: [MIT](license.txt)
 
 Możliwości:
 * logowanie
@@ -18,21 +37,4 @@ Możliwości:
 * usługi HTTP (pobieranie obrazkowego tokenu, rejestracja, zmiana hasła, przypomnienie hasła)
 * rozmowy konferencyjne
 
-----------
 
-.NET Gadu-Gadu library based on libgadu specification (http://libgadu.net/protocol/).
-
-License: [MIT](https://github.com/SzymonKatra/GG4NET/blob/master/license.txt)
-
-Features:
-* logging in
-* status changing
-* sending messages
-* receiving messages
-* typing notify
-* status change notify of contacts
-* public directory
-* multilogin
-* import / export contacts list to file / server in old format (CSV) and new (XML)
-* HTTP services (downloading image token, registration, password change, password remind)
-* conferences
